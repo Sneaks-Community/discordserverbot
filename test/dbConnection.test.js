@@ -61,8 +61,20 @@ it("creates the table and both indexes", () => {
 
     assert.ok(names.includes("players_follow"));
     assert.ok(names.includes("idx_map_name"));
-    assert.ok(names.includes("idx_discord_id"));
     assert.ok(names.includes("sqlite_autoindex_players_follow_1"), "the UNIQUE constraint's index");
+});
+
+it("drops an older database's discord_id index and looks users up through the UNIQUE index", () => {
+    withRawDatabase((raw) => raw.exec("CREATE INDEX idx_discord_id ON players_follow(discord_id)"));
+    initDB();
+
+    const { hasIndex, plan } = withRawDatabase((raw) => ({
+        hasIndex: raw.prepare("SELECT 1 FROM sqlite_master WHERE name = 'idx_discord_id'").get() !== undefined,
+        plan: raw.prepare("EXPLAIN QUERY PLAN SELECT map_name FROM players_follow WHERE discord_id = ?").all("100000000000000042").map((row) => row.detail).join("; ")
+    }));
+
+    assert.equal(hasIndex, false);
+    assert.ok(plan.includes("sqlite_autoindex_players_follow_1"), plan);
 });
 
 it("puts the database in WAL mode", () => {

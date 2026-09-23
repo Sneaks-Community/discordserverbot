@@ -38,7 +38,8 @@ export function initDB() {
             )
         `);
         db.exec("CREATE INDEX IF NOT EXISTS idx_map_name ON players_follow(map_name)");
-        db.exec("CREATE INDEX IF NOT EXISTS idx_discord_id ON players_follow(discord_id)");
+        // Redundant with the UNIQUE index, which leads with discord_id.
+        db.exec("DROP INDEX IF EXISTS idx_discord_id");
 
         // CHECK (id = 1): one server list message is the table's own invariant.
         db.exec(`
