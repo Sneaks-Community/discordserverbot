@@ -110,7 +110,7 @@ export async function handleSlashUnfollow(interaction) {
     if (!withinLimit) return;
 
     // "all" bypasses map name validation.
-    if (rawMap === "all") {
+    if (rawMap.trim().toLowerCase() === "all") {
         unfollowAll(sanitizedUserId);
         await interaction.reply({ content: "You are no longer following any maps.", flags: MessageFlags.Ephemeral });
         commandLogger.info({ userId: sanitizedUserId, username: interaction.user.tag }, "User unfollowed all maps");
