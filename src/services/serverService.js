@@ -151,6 +151,8 @@ export async function getInfo(server, index, wasOffline = false) {
         const sanitizedBots = res.bots.map((bot) => sanitizeEntry(bot, "Unknown Bot", "Bot name"));
 
         const { numBots, numPlayers } = readCounts(res);
+        // Server-supplied for some protocols, so only a number reaches the embeds
+        const maxPlayers = Number(res.maxplayers);
 
         data = {
             bots: sanitizedBots,
@@ -160,7 +162,7 @@ export async function getInfo(server, index, wasOffline = false) {
             index: index,
             keywords: server.keywords,
             map: normalizeMapName(res.map),
-            maxPlayers: res.maxplayers,
+            maxPlayers: Number.isFinite(maxPlayers) ? maxPlayers : undefined,
             name: server.nick,
             numBots: numBots,
             numPlayers: numPlayers, // Humans only; bots are counted separately

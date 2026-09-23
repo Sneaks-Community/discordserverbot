@@ -36,6 +36,22 @@ describe("getInfo", () => {
         }
     });
 
+    it("keeps maxplayers only as a finite number", async (t) => {
+        let maxplayers;
+        t.mock.method(GameDig, "query", () => Promise.resolve({ bots: [], map: "de_dust2", maxplayers, numplayers: 0, players: [] }));
+
+        for (const [reported, expected] of [
+            [24, 24],
+            ["32", 32],
+            ["[Join](https://evil.test)", undefined],
+            [{}, undefined],
+            [undefined, undefined]
+        ]) {
+            maxplayers = reported;
+            assert.equal((await getInfo(SERVER, 1)).maxPlayers, expected, String(reported));
+        }
+    });
+
     it("warns about a failed query once per outage, then logs it at debug", async (t) => {
         t.mock.method(GameDig, "query", () => Promise.reject(new Error("Failed all 1 attempts")));
         const warn = t.mock.method(serviceLogger, "warn");
