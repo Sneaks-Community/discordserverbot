@@ -25,7 +25,7 @@ export async function handleSlashPlayers(interaction) {
         return interaction.reply({ embeds: [embed] });
     }
 
-    const server = getServerByKeyword(serverInput.toLowerCase());
+    const server = getServerByKeyword(serverInput.trim().toLowerCase());
   
     if (!server) {
         return interaction.reply({ content: "Please enter a valid server.", flags: MessageFlags.Ephemeral });
