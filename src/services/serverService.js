@@ -119,9 +119,10 @@ function buildOfflineServerData(server, index) {
 /**
  * @param {object} server - The servers.json entry
  * @param {number} index - Its 1-based position in the list
+ * @param {boolean} [wasOffline] - Offline in the previous snapshot, so a failure is not news
  * @returns {Promise<object>}
  */
-export async function getInfo(server, index) {
+export async function getInfo(server, index, wasOffline = false) {
     // validateServersConfig has already rejected anything but "host" or
     // "host:port" with an in-range port, so this only applies the default.
     const [host, rawPort] = server.ip.split(":");
@@ -137,7 +138,8 @@ export async function getInfo(server, index) {
         socketTimeout: QUERY_SOCKET_TIMEOUT_MS,
         type: server.protocol || "csgo"
     }).catch((err) => {
-        serviceLogger.error({ err, serverIp: server.ip }, "GameDig query failed");
+        // Once per outage: a server down for a day would otherwise log every tick.
+        serviceLogger[wasOffline ? "debug" : "warn"]({ err, serverIp: server.ip }, "GameDig query failed");
         valid = false;
     });
 
@@ -200,7 +202,7 @@ async function getInfoWithinDeadline(name, server, index, deadline) {
     try {
         // gamedig offers no cancellation, so a late answer is discarded rather
         // than waited for; its sockets end on their own timeouts.
-        return await Promise.race([getInfo(server, index), ranOut]);
+        return await Promise.race([getInfo(server, index, _serverData[name]?.online === false), ranOut]);
     } finally {
         clearTimeout(timer);
     }

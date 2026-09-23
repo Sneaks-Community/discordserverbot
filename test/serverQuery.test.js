@@ -1,6 +1,6 @@
 /**
- * One gamedig reply becomes one snapshot entry. Some protocols fill fields from
- * the game server's own data, so those are checked before they reach Discord.
+ * One gamedig query becomes one snapshot entry: server-supplied fields are checked
+ * before they reach Discord, and a failing server is logged once per outage.
  */
 
 import assert from "node:assert/strict";
@@ -13,6 +13,7 @@ process.env.DISCORD_TOKEN = "test-token";
 process.env.LOG_LEVEL = "silent";
 
 const { getInfo } = await import("../src/services/serverService.js");
+const { serviceLogger } = await import("../src/utils/logger.js");
 
 const SERVER = Object.freeze({ ip: "1.2.3.4:27015", keywords: ["surf"], nick: "Surf" });
 
@@ -33,5 +34,17 @@ describe("getInfo", () => {
             connect = reported;
             assert.equal((await getInfo(SERVER, 1)).fullIP, expected, String(reported));
         }
+    });
+
+    it("warns about a failed query once per outage, then logs it at debug", async (t) => {
+        t.mock.method(GameDig, "query", () => Promise.reject(new Error("Failed all 1 attempts")));
+        const warn = t.mock.method(serviceLogger, "warn");
+        const debug = t.mock.method(serviceLogger, "debug");
+
+        assert.equal((await getInfo(SERVER, 1)).online, false);
+        assert.equal((await getInfo(SERVER, 1, true)).online, false);
+
+        assert.equal(warn.mock.callCount(), 1);
+        assert.equal(debug.mock.callCount(), 1);
     });
 });
