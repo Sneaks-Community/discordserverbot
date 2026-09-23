@@ -32,9 +32,6 @@ const baseConfig = {
         text: env.BOT_ACTIVITY_TEXT,
         type: ACTIVITY_TYPE_BY_NAME[env.BOT_ACTIVITY_TYPE]
     },
-    cache: {
-        userCacheTTLSeconds: env.USER_CACHE_TTL
-    },
     database: {
         path: env.DATABASE_PATH
     },
@@ -101,8 +98,7 @@ export const CONFIG_VALUES = {
     OFFLINE_SERVER_IMAGE: baseConfig.images.offlineServer,
     RETRY_BASE_DELAY_MS: toMs(baseConfig.retry.baseDelaySeconds),
     RETRY_MAX_RETRIES: baseConfig.retry.maxRetries,
-    UNFOLLOW_RATE_LIMIT_PER_MINUTE: baseConfig.rateLimit.unfollowPerMinute,
-    USER_CACHE_TTL: toMs(baseConfig.cache.userCacheTTLSeconds)
+    UNFOLLOW_RATE_LIMIT_PER_MINUTE: baseConfig.rateLimit.unfollowPerMinute
 };
 
 export const config = baseConfig;

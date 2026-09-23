@@ -112,7 +112,7 @@ describe("parseEnv, numbers", () => {
     });
 
     it("collects every bad number rather than stopping at the first", () => {
-        const { errors } = parseEnv(env({ GAMEDIG_MAX_RETRIES: "11", MAX_FOLLOWS_PER_USER: "-1", USER_CACHE_TTL: "x" }));
+        const { errors } = parseEnv(env({ GAMEDIG_MAX_RETRIES: "11", MAX_CONCURRENT_QUERIES: "x", MAX_FOLLOWS_PER_USER: "-1" }));
 
         assert.equal(errors.length, 3);
     });

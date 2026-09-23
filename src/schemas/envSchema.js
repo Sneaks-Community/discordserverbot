@@ -203,8 +203,7 @@ export const envSchema = z.object({
     // withRetry needs at least one attempt for its callback to ever run
     RETRY_MAX_RETRIES: intEnv(3, 1, 10),
     // A sub-30s interval would hammer every configured game server; 0 would busy-loop
-    SERVER_UPDATE_INTERVAL: intEnv(90, 30, 86400),
-    USER_CACHE_TTL: intEnv(300, 1, 86400)
+    SERVER_UPDATE_INTERVAL: intEnv(90, 30, 86400)
 });
 
 /** Empty is legal for these, so they produce startup warnings rather than errors. */

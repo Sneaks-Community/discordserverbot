@@ -1,7 +1,4 @@
-import { CONFIG_VALUES } from "../config/index.js";
 import { serviceLogger } from "../utils/logger.js";
-
-const userCache = new Map();
 
 // Timestamp arrays, keyed by user then action.
 const userActionRateLimits = new Map();
@@ -12,64 +9,10 @@ const dmRefusals = new Map();
 
 const DM_REFUSAL_COOLDOWN_MS = 3600000;
 
-const MAX_USER_CACHE_SIZE = 1000;
 const MAX_RATE_LIMIT_MAP_SIZE = 5000;
 const MAX_DM_REFUSAL_SIZE = 5000;
 
 const CLEANUP_INTERVAL_MS = 300000;
-
-/**
- * Fetches from Discord on a miss.
- * @param {string} userId
- * @param {import('discord.js').Client} bot
- * @returns {Promise<import('discord.js').User>}
- */
-export async function getCachedUser(userId, bot) {
-    const cached = userCache.get(userId);
-    if (cached && Date.now() - cached.timestamp < CONFIG_VALUES.USER_CACHE_TTL) {
-        // Re-inserting on a hit makes eviction LRU. The timestamp stays: the TTL
-        // measures how stale the fetched user is, not when it was last read.
-        userCache.delete(userId);
-        userCache.set(userId, cached);
-        return cached.user;
-    }
-
-    // Delete-then-set keeps insertion order equal to recency order, so the first
-    // key is the least recently used and eviction is O(1) rather than a scan.
-    userCache.delete(userId);
-
-    if (userCache.size >= MAX_USER_CACHE_SIZE) {
-        userCache.delete(userCache.keys().next().value);
-    }
-
-    const user = await bot.users.fetch(userId);
-    userCache.set(userId, { timestamp: Date.now(), user });
-    return user;
-}
-
-function cleanupUserCache() {
-    if (userCache.size === 0) return;
-
-    const now = Date.now();
-    let cleaned = 0;
-    for (const [key, value] of userCache.entries()) {
-        if (now - value.timestamp > CONFIG_VALUES.USER_CACHE_TTL) {
-            userCache.delete(key);
-            cleaned++;
-        }
-    }
-
-    // Still over the cap after the TTL pass: insertion order is recency order
-    // (see getCachedUser), so the front of the map is what to drop.
-    while (userCache.size >= MAX_USER_CACHE_SIZE) {
-        userCache.delete(userCache.keys().next().value);
-        cleaned++;
-    }
-
-    if (cleaned > 0) {
-        serviceLogger.info(`User cache cleanup: removed ${cleaned} entries, current size: ${userCache.size}`);
-    }
-}
 
 /**
  * @param {string} userId
@@ -126,7 +69,7 @@ function cleanupRateLimits() {
     }
 
     // Still over the cap: evict the users whose oldest action is oldest. No
-    // recency ordering here, unlike userCache, so this has to sort.
+    // recency ordering here, unlike dmRefusals, so this has to sort.
     if (userActionRateLimits.size >= MAX_RATE_LIMIT_MAP_SIZE) {
         const userTimestamps = [];
         for (const [userId, actions] of userActionRateLimits.entries()) {
@@ -177,8 +120,8 @@ export function isDmRefused(userId) {
  * @param {string} userId
  */
 export function markDmRefused(userId) {
-    // Same delete-then-set idiom as getCachedUser: insertion order stays recency
-    // order, so the first key is the oldest refusal.
+    // Delete-then-set keeps insertion order equal to recency order, so the first
+    // key is the oldest refusal.
     dmRefusals.delete(userId);
 
     if (dmRefusals.size >= MAX_DM_REFUSAL_SIZE) {
@@ -210,7 +153,6 @@ function cleanupDmRefusals() {
 let cleanupIntervalRefs = [];
 
 export function startCleanupIntervals() {
-    cleanupIntervalRefs.push(setInterval(cleanupUserCache, CLEANUP_INTERVAL_MS));
     cleanupIntervalRefs.push(setInterval(cleanupRateLimits, CLEANUP_INTERVAL_MS));
     cleanupIntervalRefs.push(setInterval(cleanupDmRefusals, CLEANUP_INTERVAL_MS));
 }

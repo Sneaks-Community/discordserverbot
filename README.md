@@ -213,7 +213,6 @@ selects its default.
 | `DATABASE_PATH` | No | `db.sqlite` | non-empty | SQLite file path. In Docker it must stay on the mounted volume (`/app/data/db.sqlite`, the image default) |
 | `SERVER_UPDATE_INTERVAL` | No | `90` | 30 to 86400 | How often the bot queries the servers, updates the embeds and checks for map changes, in that order, on one timer (seconds). The embed states this interval in its description |
 | `MAX_CONCURRENT_QUERIES` | No | `10` | 1 to 100 | Maximum concurrent server queries |
-| `USER_CACHE_TTL` | No | `300` | 1 to 86400 | User cache TTL (seconds) |
 | `RETRY_MAX_RETRIES` | No | `3` | 1 to 10 | Attempts for a retried Discord operation. At least 1, since 0 would mean never attempting it |
 | `RETRY_BASE_DELAY` | No | `1` | 0 to 60 | Base delay for exponential backoff (seconds) |
 | `GAMEDIG_MAX_RETRIES` | No | `4` | 0 to 10 | Maximum retries for GameDig queries. A multiplier over the ports GameDig tries, so raising it multiplies what an unreachable server costs. A refresh pass is capped at 80% of `SERVER_UPDATE_INTERVAL` regardless, and servers not reached by then are reported offline for that tick |
@@ -228,7 +227,7 @@ selects its default.
 | `HEALTH_PORT` | No | `3000` | 0 to 65535 | Port for the `GET /health` liveness endpoint, which reports 503 once no update tick has started in three intervals. This is the port the image's `HEALTHCHECK` probes, so leave it alone under Docker; `0` opens no socket and makes that healthcheck fail |
 | `HEALTH_HOST` | No | `127.0.0.1` | non-empty | Address the health endpoint binds to. Loopback keeps it reachable from inside the container only; set `0.0.0.0` and publish the port for an external monitor |
 
-Rate limits, the user cache and the per-map notification history are all held in memory, so a
+Rate limits and the per-map notification history are held in memory, so a
 restart clears every rate limit currently in effect.
 
 ## Server Configuration

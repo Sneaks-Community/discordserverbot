@@ -10,7 +10,7 @@ import { getMapImage } from "../utils/mapUtils.js";
 import { validateChannelForSend } from "../utils/permissions.js";
 import { withRetry } from "../utils/retry.js";
 import { validateWithZod } from "../utils/zodValidator.js";
-import { checkRateLimit, getCachedUser, isDmRefused, markDmRefused } from "./cacheService.js";
+import { checkRateLimit, isDmRefused, markDmRefused } from "./cacheService.js";
 
 let botInstance = null;
 
@@ -180,14 +180,6 @@ function buildNotificationContent({ ip, mapName, server }) {
 async function deliverNotification(user, event) {
     const { bot, mapName, server, validatedMapName } = event;
 
-    let u;
-    try {
-        u = await getCachedUser(user.discord_id, bot);
-    } catch (fetchError) {
-        serviceLogger.warn({ err: fetchError, userId: user.discord_id }, "Failed to fetch user");
-        return DELIVERY.failed;
-    }
-
     try {
         // Keyed per map, so a user following three maps that rotate together
         // hears about all three; only a repeat of the same map is suppressed.
@@ -218,16 +210,16 @@ async function deliverNotification(user, event) {
 
         // Mentions denied: the map name and server nick come from the game
         // server, and escapeForDiscord neutralizes markdown but not "@".
-        await u.send({
+        await bot.users.send(user.discord_id, {
             allowedMentions: { parse: [] },
             content: buildNotificationContent(event),
             embeds: [buildMapNotificationEmbed(event)]
         });
 
-        serviceLogger.info({ map: mapName, userId: u.id, username: u.tag }, "Sent notification");
+        serviceLogger.info({ map: mapName, userId: user.discord_id }, "Sent notification");
         return DELIVERY.delivered;
     } catch (e) {
-        const userId = u?.id || user.discord_id;
+        const userId = user.discord_id;
         const reason = getTerminalReason(e);
 
         if (isRecipientRefusal(e)) {
