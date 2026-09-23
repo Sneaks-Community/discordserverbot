@@ -40,7 +40,7 @@ keeps a channel message in sync with their status, and DMs users when a followed
 | Command | Description |
 |---------|-------------|
 | `/listallfollows` | List all users and their followed maps |
-| `/testnotify <map>` | Test the map notification system |
+| `/testnotify <map>` | DM yourself a sample notification for a map |
 | `/removeuser <userID>` | Remove all map follows for a specific user |
 
 The bot accepts these from a holder of `ADMIN_ROLE_ID`, from anyone with the Discord

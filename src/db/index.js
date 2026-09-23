@@ -17,6 +17,5 @@ export {
     getUserFollows,
     isFollowingMap,
     getUsersFollowingMap,
-    hasMap,
     unfollowAll
 } from "./follows.js";

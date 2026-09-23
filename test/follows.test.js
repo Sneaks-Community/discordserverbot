@@ -28,7 +28,6 @@ const {
     getAllFollows,
     getUserFollows,
     getUsersFollowingMap,
-    hasMap,
     initDB,
     isFollowingMap,
     unfollowAll,
@@ -126,18 +125,6 @@ describe("lookups by map", () => {
         assert.ok(followers.includes(USER.shared));
         assert.ok(followers.includes(USER.other));
     });
-
-    it("answers whether anyone at all follows a map", () => {
-        assert.equal(hasMap("cs_office"), true);
-        assert.equal(hasMap("de_nobody_follows_this"), false);
-    });
-
-    it("stops reporting a map once its last follower leaves", () => {
-        followMap(USER.shared, "de_lastone");
-        unfollowMap(USER.shared, "de_lastone");
-
-        assert.equal(hasMap("de_lastone"), false);
-    });
 });
 
 describe("getAllFollows", () => {
@@ -188,7 +175,7 @@ describe("input validation", () => {
     it("rejects a non-string before it reaches a statement", () => {
         for (const value of [null, undefined, 42, {}]) {
             assert.throws(() => followMap(USER.simple, value), /followMap\/map_name/);
-            assert.throws(() => hasMap(value), /hasMap\/map_name/);
+            assert.throws(() => getUsersFollowingMap(value), /getUsersFollowingMap\/map_name/);
         }
     });
 });

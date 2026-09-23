@@ -1,8 +1,8 @@
 import { MessageFlags } from "discord.js";
 
-import { getAllFollows, hasMap, unfollowAll } from "../db/index.js";
+import { getAllFollows, unfollowAll } from "../db/index.js";
 import { discordIdSchema, mapNameSchema } from "../schemas/validationSchemas.js";
-import { notifyUsers } from "../services/notificationService.js";
+import { sendTestNotification } from "../services/notificationService.js";
 import { replyWithPagedEmbed } from "../utils/pagination.js";
 import { validateWithZod } from "../utils/zodValidator.js";
 
@@ -38,8 +38,8 @@ export async function handleSlashListallfollows(interaction) {
  *   returns carry an editReply result that no caller reads
  */
 export async function handleSlashTestnotify(interaction) {
-    // The DM fanout can outrun Discord's 3 second reply deadline. Every reply
-    // here is ephemeral, so the flag carries over to each editReply below.
+    // The DM can outrun Discord's 3 second reply deadline. Every reply here is
+    // ephemeral, so the flag carries over to each editReply below.
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const map = interaction.options.getString("map");
@@ -54,14 +54,13 @@ export async function handleSlashTestnotify(interaction) {
     }
     const sanitizedMap = mapValidation.data;
 
-    if (!hasMap(sanitizedMap)) {
-        return interaction.editReply({ content: "No one is following this map." });
+    try {
+        await sendTestNotification(interaction.user, sanitizedMap);
+    } catch (err) {
+        return interaction.editReply({ content: `Could not DM you: ${err.message}` });
     }
 
-    // No client passed: notifyUsers defaults to the one initNotificationService
-    // was given, which is the client this interaction arrived on.
-    await notifyUsers(sanitizedMap, { ip: "0.0.0.0:27015", nick: "Test Server" });
-    await interaction.editReply({ content: `Notification sent for map: ${sanitizedMap}` });
+    await interaction.editReply({ content: `Sent you a test notification for ${sanitizedMap}.` });
 }
 
 /**

@@ -6,7 +6,7 @@ import { createBaseEmbed, formatPlayerCounts } from "../embeds/baseEmbed.js";
 import { mapNameSchema } from "../schemas/validationSchemas.js";
 import { getTerminalReason, isRecipientRefusal, isRetryableDiscordError, TerminalError } from "../utils/discordErrors.js";
 import { serviceLogger } from "../utils/logger.js";
-import { getMapImage, normalizeMapName } from "../utils/mapUtils.js";
+import { getMapImage } from "../utils/mapUtils.js";
 import { validateChannelForSend } from "../utils/permissions.js";
 import { withRetry } from "../utils/retry.js";
 import { validateWithZod } from "../utils/zodValidator.js";
@@ -39,21 +39,18 @@ export function initNotificationService(bot) {
 }
 
 /**
- * @param {string} map - The map name as reported by the game server
+ * @param {string} mapName - As normalized by getInfo
  * @param {object} serverObj - The server the change happened on
  * @param {import('discord.js').Client} [bot] - Defaults to the client set via
  *   initNotificationService
  * @returns {Promise<void>}
  */
-export async function notifyUsers(map, serverObj, bot = botInstance) {
+export async function notifyUsers(mapName, serverObj, bot = botInstance) {
     const server = serverObj?.nick ?? "unknown server";
 
     // gamedig's connect address when there is one: the configured ip may omit the
     // port, and steam://connect needs the port the game actually listens on.
     const ip = serverObj?.fullIP ?? serverObj?.ip ?? "unknown IP";
-
-    // Normally already done in getInfo, repeated because /testnotify reaches here.
-    const mapName = normalizeMapName(map);
 
     // Game servers can report names the follow schema rejects, and nobody can be
     // following one of those. Treated as "no followers" rather than thrown: an
@@ -103,6 +100,19 @@ export async function notifyUsers(map, serverObj, bot = botInstance) {
     if (undeliverable.total > 0) {
         await sendFallbackNotification(event, undeliverable);
     }
+}
+
+/**
+ * The DM a map change sends, to one user only and outside the rate limits.
+ * @param {import('discord.js').User} user
+ * @param {string} map - A name mapNameSchema accepted
+ * @returns {Promise<void>}
+ */
+export async function sendTestNotification(user, map) {
+    const serverObj = { ip: "0.0.0.0:27015", nick: "Test Server" };
+    const event = { ip: serverObj.ip, mapImage: getMapImage(map), mapName: map, server: serverObj.nick, serverObj };
+
+    await user.send({ content: buildNotificationContent(event), embeds: [buildMapNotificationEmbed(event)] });
 }
 
 /**

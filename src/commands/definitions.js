@@ -38,7 +38,7 @@ const COMMAND_DEFINITIONS = Object.freeze([
     { admin: false, description: "Show list of available commands", handler: handleSlashHelp, name: "help" },
     { admin: false, description: "Check bot latency", handler: handleSlashPing, name: "ping" },
     { admin: true, description: "List all users and their followed maps (Admin only)", handler: handleSlashListallfollows, name: "listallfollows" },
-    { admin: true, description: "Test map notification system (Admin only)", handler: handleSlashTestnotify, name: "testnotify",
+    { admin: true, description: "DM yourself a sample map notification (Admin only)", handler: handleSlashTestnotify, name: "testnotify",
         options: opt => opt.setName("map").setDescription("Map name to test").setRequired(true) },
     { admin: true, description: "Remove all follows for a user (Admin only)", handler: handleSlashRemoveuser, name: "removeuser",
         options: opt => opt.setName("userid").setDescription("Discord user ID").setRequired(true) }

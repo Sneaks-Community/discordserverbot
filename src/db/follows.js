@@ -90,17 +90,6 @@ export function getUsersFollowingMap(map_name) {
     return runStatement("SELECT discord_id FROM players_follow WHERE map_name = ?", [validatedMapName], "getUsersFollowingMap", "all");
 }
 
-/**
- * As with isFollowingMap, only the presence of a row matters.
- * @param {string} map_name
- * @returns {boolean}
- */
-export function hasMap(map_name) {
-    const validatedMapName = validateOrThrow(mapNameSchema, map_name, "hasMap/map_name");
-    const row = runStatement("SELECT 1 FROM players_follow WHERE map_name = ?", [validatedMapName], "hasMap", "get");
-    return row !== undefined;
-}
-
 /** @param {string} discord_id */
 export function unfollowAll(discord_id) {
     const validatedDiscordId = validateOrThrow(discordIdSchema, discord_id, "unfollowAll/discord_id");
