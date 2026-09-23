@@ -18,9 +18,6 @@ COPY package*.json ./
 # Install production dependencies
 RUN npm ci --omit=dev --ignore-scripts
 
-# Copy source code
-COPY src/ ./src/
-
 # Rebuild native modules for current Node.js version
 RUN npm rebuild better-sqlite3
 
@@ -50,7 +47,7 @@ COPY src/ ./src/
 
 # Create data directory for SQLite database and set permissions
 RUN mkdir -p /app/data && \
-    chown -R nodejs:nodejs /app
+    chown nodejs:nodejs /app/data
 
 ENV NODE_ENV=production \
     DATABASE_PATH=/app/data/db.sqlite \
