@@ -106,8 +106,7 @@ bot.on(Events.ClientReady, async () => {
         void reconcileFollows(bot);
     } catch (err) {
         botLogger.fatal({ err }, "Failed during ready initialization");
-        await flushLogs();
-        process.exit(1);
+        void gracefulShutdown("ready failure", 1);
     }
 });
 
