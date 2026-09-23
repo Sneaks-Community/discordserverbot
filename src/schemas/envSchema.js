@@ -207,7 +207,7 @@ export const envSchema = z.object({
 
 /** Empty is legal for these, so they produce startup warnings rather than errors. */
 const OPTIONAL_FEATURES = Object.freeze([
-    { disables: "admin commands will be inaccessible", variable: "ADMIN_ROLE_ID" },
+    { disables: "admin commands are limited to Administrators and the guild owner", variable: "ADMIN_ROLE_ID" },
     { disables: "fallback notifications will be disabled", variable: "FALLBACK_CHANNEL_ID" },
     { disables: "server list embeds will not be updated", variable: "EMBED_CHANNEL_ID" }
 ]);
