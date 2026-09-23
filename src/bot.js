@@ -1,4 +1,4 @@
-import Discord, { Events, GatewayIntentBits, Options, Partials, RESTJSONErrorCodes } from "discord.js";
+import Discord, { Events, GatewayIntentBits, Options, Partials, RESTJSONErrorCodes, SnowflakeUtil } from "discord.js";
 
 import { registerSlashCommands, handleInteraction } from "./commands/index.js";
 import { config, CONFIG_VALUES, validateConfig } from "./config/index.js";
@@ -9,10 +9,9 @@ import { reconcileFollows } from "./services/followReconciliation.js";
 import { recordTick, startHealthServer, stopHealthServer } from "./services/healthService.js";
 import { notifyUsers, initNotificationService } from "./services/notificationService.js";
 import { refresh, getServerData, updateServerData } from "./services/serverService.js";
-import { getTerminalReason, isRetryableDiscordError, TerminalError } from "./utils/discordErrors.js";
+import { getTerminalReason, TerminalError } from "./utils/discordErrors.js";
 import { botLogger, flushLogs } from "./utils/logger.js";
 import { validateChannelForStatus } from "./utils/permissions.js";
-import { withRetry } from "./utils/retry.js";
 
 let embedInterval = null;
 
@@ -172,7 +171,7 @@ async function editTrackedMessage(channel, messageID, embed) {
         await message.edit(embedPayload(embed));
         return true;
     } catch (err) {
-        // isRetryableDiscordError treats this code as terminal; here a deleted
+        // getTerminalReason treats this code as terminal; here a deleted
         // message is recoverable by posting another.
         if (err?.code === RESTJSONErrorCodes.UnknownMessage) {
             botLogger.warn({ channelId: channel.id, messageId: messageID }, "The server list message is gone; posting a new one");
@@ -183,8 +182,11 @@ async function editTrackedMessage(channel, messageID, embed) {
     }
 }
 
+let isPublishing = false;
+
 /**
- * Keeps EMBED_CHANNEL_ID holding one up-to-date server list message.
+ * Keeps EMBED_CHANNEL_ID holding one up-to-date server list message. Not retried
+ * here: @discordjs/rest already retries 5xx and timeouts, and the next tick is the retry.
  * @param {import('discord.js').EmbedBuilder} embed
  * @returns {Promise<void>}
  */
@@ -196,47 +198,54 @@ async function publishEmbed(embed) {
         return;
     }
 
+    // A publish can outlast a tick, and two with no tracked message would both post.
+    if (isPublishing) {
+        botLogger.debug("Skipping embed update -- the previous one is still in progress");
+        return;
+    }
+
+    isPublishing = true;
     try {
-        await withRetry(async () => {
-            const channel = await bot.channels.fetch(channelID);
+        const channel = await bot.channels.fetch(channelID);
 
-            // Terminal: a missing permission needs an operator, not another attempt.
-            const permCheck = validateChannelForStatus(channel);
-            if (!permCheck.valid) {
-                throw new TerminalError(
-                    `Permission check failed for channel ${channelID}: ${permCheck.error}`,
-                    `${permCheck.error} in channel ${channelID}; grant the bot those permissions there`
-                );
-            }
+        // Terminal, so the log names the fix rather than a bare failure.
+        const permCheck = validateChannelForStatus(channel);
+        if (!permCheck.valid) {
+            throw new TerminalError(
+                `Permission check failed for channel ${channelID}: ${permCheck.error}`,
+                `${permCheck.error} in channel ${channelID}; grant the bot those permissions there`
+            );
+        }
 
-            const tracked = getEmbedMessage();
+        const tracked = getEmbedMessage();
 
-            // EMBED_CHANNEL_ID changed. The old message is left frozen, not deleted
-            // from a channel the bot is no longer configured for.
-            if (tracked && tracked.channelID !== channelID) {
-                botLogger.info({ channelId: channelID, previousChannelId: tracked.channelID }, "EMBED_CHANNEL_ID changed; posting a new server list and abandoning the old message");
-                clearEmbedMessage();
-            } else if (tracked && await editTrackedMessage(channel, tracked.messageID, embed)) {
-                return;
-            }
+        // EMBED_CHANNEL_ID changed. The old message is left frozen, not deleted
+        // from a channel the bot is no longer configured for.
+        if (tracked && tracked.channelID !== channelID) {
+            botLogger.info({ channelId: channelID, previousChannelId: tracked.channelID }, "EMBED_CHANNEL_ID changed; posting a new server list and abandoning the old message");
+            clearEmbedMessage();
+        } else if (tracked && await editTrackedMessage(channel, tracked.messageID, embed)) {
+            return;
+        }
 
-            const message = await channel.send(embedPayload(embed));
+        // When REST re-sends a timed-out post, the nonce makes Discord return the first message.
+        const message = await channel.send({ ...embedPayload(embed), enforceNonce: true, nonce: SnowflakeUtil.generate().toString() });
 
-            // Swallowed: the send succeeded, so a throw would make withRetry post a
-            // duplicate. A lost ID costs one abandoned message.
-            try {
-                setEmbedMessage(channelID, message.id);
-            } catch (err) {
-                botLogger.error({ channelId: channelID, err, messageId: message.id }, "Posted the server list but could not record its ID; the next update will post another");
-            }
-        }, { isRetryable: isRetryableDiscordError });
+        // Not left to the catch below: the post succeeded, so that log would mislead.
+        try {
+            setEmbedMessage(channelID, message.id);
+        } catch (err) {
+            botLogger.error({ channelId: channelID, err, messageId: message.id }, "Posted the server list but could not record its ID; the next update will post another");
+        }
     } catch (err) {
         const reason = getTerminalReason(err);
         if (reason) {
-            botLogger.error({ channelId: channelID, err }, `Embed update cannot succeed and will not be retried. ${reason}`);
+            botLogger.error({ channelId: channelID, err }, `Embed update cannot succeed until this is fixed. ${reason}`);
         } else {
-            botLogger.error({ channelId: channelID, err }, "Failed to update embed after retries");
+            botLogger.error({ channelId: channelID, err }, "Failed to update embed; the next tick will try again");
         }
+    } finally {
+        isPublishing = false;
     }
 }
 
@@ -298,7 +307,7 @@ bot.on(Events.InteractionCreate, async (interaction) => {
 
 /**
  * The intervals keep running through a reconnect: server queries do not touch
- * Discord, and embed edits are REST calls that withRetry covers.
+ * Discord, and embed edits are REST calls that the next tick retries.
  */
 bot.on(Events.ShardDisconnect, (event, shardId) => {
     // Only emitted for unrecoverable close codes. Exit so the restart policy fires

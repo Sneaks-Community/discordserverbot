@@ -2,7 +2,7 @@ import { GameDig } from "gamedig";
 import pLimit from "p-limit";
 
 import { CONFIG_VALUES, serverObject } from "../config/index.js";
-import { DEFAULT_SERVER_PORT, playerNameSchema, SERVER_IP_MAX_LENGTH } from "../schemas/validationSchemas.js";
+import { DEFAULT_SERVER_PORT, playerNameSchema } from "../schemas/validationSchemas.js";
 import { serviceLogger } from "../utils/logger.js";
 import { normalizeMapName } from "../utils/mapUtils.js";
 import { validateWithZod } from "../utils/zodValidator.js";
@@ -152,9 +152,9 @@ export async function getInfo(server, index) {
 
         data = {
             bots: sanitizedBots,
-            // Server-supplied, and it reaches an embed field, the DM's steam://
-            // link and the fallback message, hence the clamp.
-            fullIP: (typeof res.connect === "string" ? res.connect : server.ip).slice(0, SERVER_IP_MAX_LENGTH),
+            // Server-supplied for some protocols, and the DM inserts it raw after
+            // steam://connect/, so anything but host:port gives way to the configured ip.
+            fullIP: typeof res.connect === "string" && /^[A-Za-z0-9.-]{1,253}:\d{1,5}$/.test(res.connect) ? res.connect : server.ip,
             index: index,
             keywords: server.keywords,
             map: normalizeMapName(res.map),

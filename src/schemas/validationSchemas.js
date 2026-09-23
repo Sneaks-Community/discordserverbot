@@ -37,12 +37,6 @@ const MAX_SERVERS = 25;
 
 export const DEFAULT_SERVER_PORT = 27015;
 
-/**
- * Also caps the connect string a server reports back (getInfo's `fullIP`).
- * A 253-character hostname plus ":65535" is the longest either can legitimately be.
- */
-export const SERVER_IP_MAX_LENGTH = 255;
-
 /** No IPv6: the colon is the port separator, matching the single-colon split in getInfo. */
 const serverIpSchema = z
     .string({ error: "ip is required and must be a string" })

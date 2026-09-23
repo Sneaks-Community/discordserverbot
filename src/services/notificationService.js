@@ -1,3 +1,4 @@
+import { SnowflakeUtil } from "discord.js";
 import pLimit from "p-limit";
 
 import { CONFIG_VALUES, config } from "../config/index.js";
@@ -294,6 +295,9 @@ async function sendFallbackNotification(event, undeliverable) {
         return;
     }
 
+    // One nonce for every attempt, so a retried post returns the first instead of repeating it.
+    const nonce = SnowflakeUtil.generate().toString();
+
     try {
         await withRetry(async () => {
             const channel = await resolveFallbackChannel(bot);
@@ -310,7 +314,9 @@ async function sendFallbackNotification(event, undeliverable) {
             await channel.send({
                 allowedMentions: { parse: [] },
                 content: `${buildNotificationContent(event)}\n${describeUndeliverable(undeliverable)}`,
-                embeds: [buildMapNotificationEmbed(event)]
+                embeds: [buildMapNotificationEmbed(event)],
+                enforceNonce: true,
+                nonce
             });
         }, { isRetryable: isRetryableDiscordError });
 

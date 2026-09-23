@@ -29,7 +29,7 @@ export async function withRetry(fn, options = {}) {
             lastError = error;
             if (i === attempts - 1 || !isRetryable(error)) break;
             // Equal jitter: half the backoff fixed, half random, so parallel retries
-            // (one per configured embed) stop landing on the same tick.
+            // stop landing on the same tick.
             const backoff = baseDelay * 2 ** i;
             await new Promise(resolve => setTimeout(resolve, backoff / 2 + Math.random() * (backoff / 2)));
         }
