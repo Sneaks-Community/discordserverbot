@@ -1,4 +1,4 @@
-import { CONFIG_VALUES } from "../config/index.js";
+import { config } from "../config/index.js";
 
 /**
  * Exponential backoff. Attempts are clamped, since 0 would skip the loop and resolve undefined.
@@ -12,9 +12,9 @@ import { CONFIG_VALUES } from "../config/index.js";
  */
 export async function withRetry(fn, options = {}) {
     const {
-        baseDelay = CONFIG_VALUES.RETRY_BASE_DELAY_MS,
+        baseDelay = config.retryBaseDelayMs,
         isRetryable = () => true,
-        maxRetries = CONFIG_VALUES.RETRY_MAX_RETRIES
+        maxRetries = config.retryMaxRetries
     } = options;
 
     const requested = Number(maxRetries);

@@ -1,7 +1,7 @@
 import { GameDig } from "gamedig";
 import pLimit from "p-limit";
 
-import { CONFIG_VALUES, serverObject } from "../config/index.js";
+import { config, serverObject } from "../config/index.js";
 import { DEFAULT_SERVER_PORT, playerNameSchema } from "../schemas/validationSchemas.js";
 import { serviceLogger } from "../utils/logger.js";
 import { normalizeMapName } from "../utils/mapUtils.js";
@@ -133,7 +133,7 @@ export async function getInfo(server, index, wasOffline = false) {
     const res = await GameDig.query({
         attemptTimeout: QUERY_ATTEMPT_TIMEOUT_MS,
         host: host,
-        maxRetries: CONFIG_VALUES.GAMEDIG_MAX_RETRIES,
+        maxRetries: config.gamedigMaxRetries,
         port: port,
         socketTimeout: QUERY_SOCKET_TIMEOUT_MS,
         type: server.protocol || "csgo"
@@ -226,9 +226,9 @@ export async function refresh() {
 
     try {
         const serverEntries = Object.entries(serverObject);
-        const deadline = startedAt + Math.round(CONFIG_VALUES.EMBED_UPDATE_INTERVAL_MS * REFRESH_BUDGET_FRACTION);
+        const deadline = startedAt + Math.round(config.serverUpdateIntervalMs * REFRESH_BUDGET_FRACTION);
 
-        const limit = pLimit(CONFIG_VALUES.MAX_CONCURRENT_SERVER_QUERIES);
+        const limit = pLimit(config.maxConcurrentQueries);
 
         const results = await Promise.all(
             serverEntries.map(([name, server], index) =>
@@ -253,8 +253,8 @@ export async function refresh() {
         // Against the interval, not the budget: hitting the budget is the deadline
         // working, passing the interval means it failed and the next tick is lost.
         const elapsedMs = Date.now() - startedAt;
-        if (elapsedMs > CONFIG_VALUES.EMBED_UPDATE_INTERVAL_MS) {
-            serviceLogger.warn({ elapsedMs, intervalMs: CONFIG_VALUES.EMBED_UPDATE_INTERVAL_MS }, "Refresh pass outlasted the update interval; the next tick will be skipped");
+        if (elapsedMs > config.serverUpdateIntervalMs) {
+            serviceLogger.warn({ elapsedMs, intervalMs: config.serverUpdateIntervalMs }, "Refresh pass outlasted the update interval; the next tick will be skipped");
         } else {
             serviceLogger.debug({ elapsedMs }, "Refresh pass complete");
         }

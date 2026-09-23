@@ -66,18 +66,18 @@ export async function handleSlashTestnotify(interaction) {
  * @returns {Promise<void|Reply>} - Early returns carry the reply; no caller reads it
  */
 export async function handleSlashRemoveuser(interaction) {
-    const userID = interaction.options.getString("userid");
+    const userId = interaction.options.getString("userid");
 
-    if (!userID) {
+    if (!userId) {
         return interaction.reply({ content: "Please enter a valid user ID.", flags: MessageFlags.Ephemeral });
     }
 
-    const userIdValidation = validateWithZod(discordIdSchema, userID, "User ID");
+    const userIdValidation = validateWithZod(discordIdSchema, userId, "User ID");
     if (!userIdValidation.valid) {
         return interaction.reply({ content: userIdValidation.error, flags: MessageFlags.Ephemeral });
     }
 
     unfollowAll(userIdValidation.data);
     // A real mention in content: deny pings rather than rely on the ephemeral flag staying put.
-    await interaction.reply({ allowedMentions: { parse: [] }, content: `Removed all maps from user <@${userID}>.`, flags: MessageFlags.Ephemeral });
+    await interaction.reply({ allowedMentions: { parse: [] }, content: `Removed all maps from user <@${userId}>.`, flags: MessageFlags.Ephemeral });
 }

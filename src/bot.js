@@ -1,7 +1,7 @@
 import Discord, { Events, GatewayIntentBits, Options, Partials, RESTJSONErrorCodes, SnowflakeUtil } from "discord.js";
 
 import { registerSlashCommands, handleInteraction } from "./commands/index.js";
-import { config, CONFIG_VALUES, validateConfig } from "./config/index.js";
+import { config, validateConfig } from "./config/index.js";
 import { initDB, closeDB, unfollowAll, clearEmbedMessage, getEmbedMessage, setEmbedMessage } from "./db/index.js";
 import { makeEmbed } from "./embeds/serverEmbeds.js";
 import { startCleanupIntervals, clearCleanupIntervals } from "./services/cacheService.js";
@@ -21,7 +21,7 @@ let embedInterval = null;
  * @returns {import('discord.js').PresenceData}
  */
 function buildPresence() {
-    const { text, type } = config.activity;
+    const { botActivityText: text, botActivityType: type } = config;
 
     return { activities: text ? [{ name: text, type }] : [] };
 }
@@ -76,7 +76,7 @@ export async function initBot() {
 
     // Awaited so a bad token or disallowed intents rejects initBot. Pino redacts
     // only object keys, so never interpolate the token into a message.
-    await bot.login(config.discord.token);
+    await bot.login(config.discordToken);
 }
 
 bot.on(Events.ClientReady, async () => {
@@ -98,7 +98,7 @@ bot.on(Events.ClientReady, async () => {
         }
 
         await intervalFunction();
-        embedInterval = setInterval(intervalFunction, CONFIG_VALUES.EMBED_UPDATE_INTERVAL_MS);
+        embedInterval = setInterval(intervalFunction, config.serverUpdateIntervalMs);
         startCleanupIntervals();
 
         // Not awaited: a full member fetch is slow and nothing depends on it.
@@ -161,20 +161,20 @@ function embedPayload(embed) {
 
 /**
  * @param {import('discord.js').TextChannel} channel
- * @param {string} messageID
+ * @param {string} messageId
  * @param {import('discord.js').EmbedBuilder} embed
  * @returns {Promise<boolean>} - False if the message is gone; other failures throw
  */
-async function editTrackedMessage(channel, messageID, embed) {
+async function editTrackedMessage(channel, messageId, embed) {
     try {
-        const message = await channel.messages.fetch(messageID);
+        const message = await channel.messages.fetch(messageId);
         await message.edit(embedPayload(embed));
         return true;
     } catch (err) {
         // getTerminalReason treats this code as terminal; here a deleted
         // message is recoverable by posting another.
         if (err?.code === RESTJSONErrorCodes.UnknownMessage) {
-            botLogger.warn({ channelId: channel.id, messageId: messageID }, "The server list message is gone; posting a new one");
+            botLogger.warn({ channelId: channel.id, messageId }, "The server list message is gone; posting a new one");
             return false;
         }
 
@@ -191,10 +191,10 @@ let isPublishing = false;
  * @returns {Promise<void>}
  */
 async function publishEmbed(embed) {
-    const channelID = config.embedsConfig.channelID;
+    const channelId = config.embedChannelId;
 
     // Empty means the feature is off, which validateConfig already warned about.
-    if (!channelID) {
+    if (!channelId) {
         return;
     }
 
@@ -206,14 +206,14 @@ async function publishEmbed(embed) {
 
     isPublishing = true;
     try {
-        const channel = await bot.channels.fetch(channelID);
+        const channel = await bot.channels.fetch(channelId);
 
         // Terminal, so the log names the fix rather than a bare failure.
         const permCheck = validateChannelForStatus(channel);
         if (!permCheck.valid) {
             throw new TerminalError(
-                `Permission check failed for channel ${channelID}: ${permCheck.error}`,
-                `${permCheck.error} in channel ${channelID}; grant the bot those permissions there`
+                `Permission check failed for channel ${channelId}: ${permCheck.error}`,
+                `${permCheck.error} in channel ${channelId}; grant the bot those permissions there`
             );
         }
 
@@ -221,10 +221,10 @@ async function publishEmbed(embed) {
 
         // EMBED_CHANNEL_ID changed. The old message is left frozen, not deleted
         // from a channel the bot is no longer configured for.
-        if (tracked && tracked.channelID !== channelID) {
-            botLogger.info({ channelId: channelID, previousChannelId: tracked.channelID }, "EMBED_CHANNEL_ID changed; posting a new server list and abandoning the old message");
+        if (tracked && tracked.channelId !== channelId) {
+            botLogger.info({ channelId, previousChannelId: tracked.channelId }, "EMBED_CHANNEL_ID changed; posting a new server list and abandoning the old message");
             clearEmbedMessage();
-        } else if (tracked && await editTrackedMessage(channel, tracked.messageID, embed)) {
+        } else if (tracked && await editTrackedMessage(channel, tracked.messageId, embed)) {
             return;
         }
 
@@ -233,16 +233,16 @@ async function publishEmbed(embed) {
 
         // Not left to the catch below: the post succeeded, so that log would mislead.
         try {
-            setEmbedMessage(channelID, message.id);
+            setEmbedMessage(channelId, message.id);
         } catch (err) {
-            botLogger.error({ channelId: channelID, err, messageId: message.id }, "Posted the server list but could not record its ID; the next update will post another");
+            botLogger.error({ channelId, err, messageId: message.id }, "Posted the server list but could not record its ID; the next update will post another");
         }
     } catch (err) {
         const reason = getTerminalReason(err);
         if (reason) {
-            botLogger.error({ channelId: channelID, err }, `Embed update cannot succeed until this is fixed. ${reason}`);
+            botLogger.error({ channelId, err }, `Embed update cannot succeed until this is fixed. ${reason}`);
         } else {
-            botLogger.error({ channelId: channelID, err }, "Failed to update embed; the next tick will try again");
+            botLogger.error({ channelId, err }, "Failed to update embed; the next tick will try again");
         }
     } finally {
         isPublishing = false;
@@ -266,13 +266,13 @@ async function leaveOtherGuild(guild) {
  * @throws {Error} If the bot is not in the configured guild
  */
 async function enforceSingleGuild() {
-    const primaryGuildID = config.discord.guildID;
+    const primaryGuildId = config.discordGuildId;
 
-    if (!bot.guilds.cache.has(primaryGuildID)) {
-        throw new Error(`The bot is not in DISCORD_GUILD_ID ${primaryGuildID}; check the ID and that the bot has been invited to that guild`);
+    if (!bot.guilds.cache.has(primaryGuildId)) {
+        throw new Error(`The bot is not in DISCORD_GUILD_ID ${primaryGuildId}; check the ID and that the bot has been invited to that guild`);
     }
 
-    await Promise.all(bot.guilds.cache.filter((guild) => guild.id !== primaryGuildID).map(leaveOtherGuild));
+    await Promise.all(bot.guilds.cache.filter((guild) => guild.id !== primaryGuildId).map(leaveOtherGuild));
 }
 
 /**
@@ -280,7 +280,7 @@ async function enforceSingleGuild() {
  * so a guild returning after an outage (guildAvailable) cannot trip it.
  */
 bot.on(Events.GuildCreate, (guild) => {
-    if (guild.id === config.discord.guildID) {
+    if (guild.id === config.discordGuildId) {
         return;
     }
 
@@ -289,7 +289,7 @@ bot.on(Events.GuildCreate, (guild) => {
 
 /** Scoped to the served guild: a leave elsewhere must not wipe this guild's follows. */
 bot.on(Events.GuildMemberRemove, (member) => {
-    if (member.guild?.id !== config.discord.guildID) {
+    if (member.guild?.id !== config.discordGuildId) {
         return;
     }
 

@@ -1,4 +1,4 @@
-import { CONFIG_VALUES } from "../config/index.js";
+import { config } from "../config/index.js";
 import { escapeForDiscord, escapeLines } from "../utils/discordEscape.js";
 import { EMBED_DESCRIPTION_LIMIT, joinWithinLimit } from "../utils/truncate.js";
 import { createBaseEmbed, formatPlayerCounts } from "./baseEmbed.js";
@@ -26,7 +26,7 @@ export function playerListEmbed(server) {
         embed.setDescription(list || "No players connected.");
     } else {
         embed = createBaseEmbed(`${escapeForDiscord(server.name)} is currently unavailable.`)
-            .setImage(CONFIG_VALUES.OFFLINE_SERVER_IMAGE);
+            .setImage(config.offlineServerImage);
     }
 
     return embed;

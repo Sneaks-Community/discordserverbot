@@ -24,7 +24,7 @@ export function selectDepartedFollowers(followerIds, memberIds) {
  * @returns {Promise<void>}
  */
 export async function reconcileFollows(bot) {
-    const guildId = config.discord.guildID;
+    const guildId = config.discordGuildId;
     const guild = bot.guilds.cache.get(guildId);
 
     if (!guild) {

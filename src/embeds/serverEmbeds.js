@@ -1,4 +1,4 @@
-import { CONFIG_VALUES } from "../config/index.js";
+import { config } from "../config/index.js";
 import { escapeForDiscord } from "../utils/discordEscape.js";
 import { embedLogger } from "../utils/logger.js";
 import { clampText, EMBED_FIELD_NAME_LIMIT, EMBED_FIELD_VALUE_LIMIT, EMBED_TOTAL_LIMIT } from "../utils/truncate.js";
@@ -29,7 +29,7 @@ export function describeInterval(ms) {
  */
 export function makeEmbed(serverData) {
     const title = "Server List";
-    const description = `This list is updated every ${describeInterval(CONFIG_VALUES.EMBED_UPDATE_INTERVAL_MS)}.`;
+    const description = `This list is updated every ${describeInterval(config.serverUpdateIntervalMs)}.`;
     const embed = createBaseEmbed(title).setDescription(description);
 
     // Fields come from game server replies, so both limits are enforced: passing

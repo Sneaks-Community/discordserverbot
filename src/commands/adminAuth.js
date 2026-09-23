@@ -5,8 +5,8 @@ import { PermissionFlagsBits } from "discord.js";
 import { config } from "../config/index.js";
 
 // envSchema guarantees a snowflake, or "" (disabled) for the role.
-const adminRoleId = config.security.adminRoleId;
-const primaryGuildID = config.discord.guildID;
+const adminRoleId = config.adminRoleId;
+const primaryGuildId = config.discordGuildId;
 
 /**
  * Admins and the owner qualify too: setDefaultMemberPermissions(0) shows them the commands.
@@ -16,7 +16,7 @@ const primaryGuildID = config.discord.guildID;
  */
 export function hasAdminRole(interaction) {
     // Administrator and ownership hold in any guild, and these commands act on the whole database.
-    if (interaction.guildId !== primaryGuildID) return false;
+    if (interaction.guildId !== primaryGuildId) return false;
 
     if (interaction.memberPermissions?.has(PermissionFlagsBits.Administrator) === true) return true;
 

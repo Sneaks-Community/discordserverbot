@@ -7,7 +7,7 @@ import http from "node:http";
 
 import { Status } from "discord.js";
 
-import { CONFIG_VALUES } from "../config/index.js";
+import { config } from "../config/index.js";
 import { serviceLogger } from "../utils/logger.js";
 import { getServerData } from "./serverService.js";
 
@@ -17,7 +17,7 @@ const HEALTH_PATH = "/health";
 // already handled by the refresh guard and must not fail the check on its own.
 const STALE_TICK_MULTIPLIER = 3;
 
-const STALE_AFTER_MS = CONFIG_VALUES.EMBED_UPDATE_INTERVAL_MS * STALE_TICK_MULTIPLIER;
+const STALE_AFTER_MS = config.serverUpdateIntervalMs * STALE_TICK_MULTIPLIER;
 
 /** Epoch ms of the last tick start, or null before the first one. */
 let lastTickAt = null;
@@ -83,7 +83,7 @@ function handleRequest(bot, req, res) {
  * @returns {import('node:http').Server | null} - Null when disabled; returned for tests
  */
 export function startHealthServer(bot) {
-    const { HEALTH_HOST: host, HEALTH_PORT: port } = CONFIG_VALUES;
+    const { healthHost: host, healthPort: port } = config;
 
     if (port === 0) {
         serviceLogger.debug("Health endpoint disabled; set HEALTH_PORT to enable it");

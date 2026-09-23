@@ -56,20 +56,20 @@ it("reports no tracked message before the bot has posted one", () => {
 it("stores and returns the channel and message together", () => {
     setEmbedMessage(CHANNEL_ID, MESSAGE_ID);
 
-    assert.deepEqual(getEmbedMessage(), { channelID: CHANNEL_ID, messageID: MESSAGE_ID });
+    assert.deepEqual(getEmbedMessage(), { channelId: CHANNEL_ID, messageId: MESSAGE_ID });
 });
 
 it("replaces the tracked message rather than accumulating rows", () => {
     setEmbedMessage(CHANNEL_ID, "333333333333333333");
 
-    assert.deepEqual(getEmbedMessage(), { channelID: CHANNEL_ID, messageID: "333333333333333333" });
+    assert.deepEqual(getEmbedMessage(), { channelId: CHANNEL_ID, messageId: "333333333333333333" });
     assert.equal(rowCount(), 1);
 });
 
 it("records a move to another channel", () => {
     setEmbedMessage("444444444444444444", "555555555555555555");
 
-    assert.deepEqual(getEmbedMessage(), { channelID: "444444444444444444", messageID: "555555555555555555" });
+    assert.deepEqual(getEmbedMessage(), { channelId: "444444444444444444", messageId: "555555555555555555" });
     assert.equal(rowCount(), 1);
 });
 

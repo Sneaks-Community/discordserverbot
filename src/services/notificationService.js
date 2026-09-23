@@ -1,7 +1,7 @@
 import { SnowflakeUtil } from "discord.js";
 import pLimit from "p-limit";
 
-import { CONFIG_VALUES, config } from "../config/index.js";
+import { config } from "../config/index.js";
 import { getUsersFollowingMap } from "../db/index.js";
 import { createBaseEmbed, formatPlayerCounts } from "../embeds/baseEmbed.js";
 import { mapNameSchema } from "../schemas/validationSchemas.js";
@@ -66,12 +66,12 @@ export async function notifyUsers(mapName, serverObj, bot = botInstance) {
     const deliverable = followers.filter((follower) => !isDmRefused(follower.discord_id));
     const inCooldown = followers.length - deliverable.length;
 
-    const recipients = deliverable.slice(0, CONFIG_VALUES.MAX_NOTIFICATION_RECIPIENTS);
+    const recipients = deliverable.slice(0, config.maxNotificationRecipients);
     const overCap = deliverable.length - recipients.length;
     if (overCap > 0) {
         serviceLogger.warn(
             {
-                cap: CONFIG_VALUES.MAX_NOTIFICATION_RECIPIENTS,
+                cap: config.maxNotificationRecipients,
                 map: mapName,
                 notified: recipients.length,
                 server,
@@ -198,11 +198,11 @@ async function deliverNotification(user, event) {
         }
 
         // Checked second so a suppressed duplicate spends none of the ceiling.
-        const perUser = checkRateLimit(user.discord_id, "notification", CONFIG_VALUES.NOTIFICATION_RATE_LIMIT_PER_MINUTE);
+        const perUser = checkRateLimit(user.discord_id, "notification", config.rateLimitNotificationPerMinute);
         if (!perUser.allowed) {
             serviceLogger.warn(
                 {
-                    limit: CONFIG_VALUES.NOTIFICATION_RATE_LIMIT_PER_MINUTE,
+                    limit: config.rateLimitNotificationPerMinute,
                     map: mapName,
                     retryAfter: perUser.retryAfter,
                     server,
@@ -252,24 +252,23 @@ async function deliverNotification(user, event) {
  * @throws {TerminalError} If the channel does not resolve, or is in another guild
  */
 async function resolveFallbackChannel(bot) {
-    const { channelID } = config.fallback;
-    const guildID = config.discord.guildID;
+    const { discordGuildId: guildId, fallbackChannelId: channelId } = config;
 
-    const channel = bot.channels.cache.get(channelID) ?? (await bot.channels.fetch(channelID));
+    const channel = bot.channels.cache.get(channelId) ?? (await bot.channels.fetch(channelId));
     if (!channel) {
         throw new TerminalError(
-            `Fallback channel ${channelID} not found`,
-            `FALLBACK_CHANNEL_ID ${channelID} does not resolve to a channel the bot can see; check the ID and that the channel is in guild ${guildID}`
+            `Fallback channel ${channelId} not found`,
+            `FALLBACK_CHANNEL_ID ${channelId} does not resolve to a channel the bot can see; check the ID and that the channel is in guild ${guildId}`
         );
     }
 
     // Checked rather than assumed: fetch() also resolves DM channels, and an ID
     // left over from a guild the bot has since left would fail further in.
-    const channelGuildID = channel.guildId ?? channel.guild?.id;
-    if (channelGuildID !== guildID) {
+    const channelGuildId = channel.guildId ?? channel.guild?.id;
+    if (channelGuildId !== guildId) {
         throw new TerminalError(
-            `Fallback channel ${channelID} is in guild ${channelGuildID}, not the served guild ${guildID}`,
-            `FALLBACK_CHANNEL_ID ${channelID} is not a channel in guild ${guildID}; point it at one there`
+            `Fallback channel ${channelId} is in guild ${channelGuildId}, not the served guild ${guildId}`,
+            `FALLBACK_CHANNEL_ID ${channelId} is not a channel in guild ${guildId}; point it at one there`
         );
     }
 
@@ -288,7 +287,7 @@ async function sendFallbackNotification(event, undeliverable) {
     const { bot, mapName } = event;
 
     // Without this, an unconfigured fallback costs three retried throws with backoff.
-    if (!config.fallback.channelID) {
+    if (!config.fallbackChannelId) {
         serviceLogger.debug({ map: mapName, undeliverable: undeliverable.total }, "No fallback channel configured, skipping fallback notification");
         return;
     }
@@ -310,7 +309,7 @@ async function sendFallbackNotification(event, undeliverable) {
             if (!permCheck.valid) {
                 throw new TerminalError(
                     `Fallback channel permission error: ${permCheck.error}`,
-                    `${permCheck.error} in the fallback channel ${config.fallback.channelID}; grant the bot those permissions there`
+                    `${permCheck.error} in the fallback channel ${config.fallbackChannelId}; grant the bot those permissions there`
                 );
             }
             // As with the DM, and it matters more here: an @everyone slipping

@@ -1,6 +1,6 @@
 import { MessageFlags } from "discord.js";
 
-import { CONFIG_VALUES } from "../config/index.js";
+import { config } from "../config/index.js";
 import { followMap, unfollowMap, countUserFollows, getUserFollows, isFollowingMap, unfollowAll } from "../db/index.js";
 import { discordIdSchema, mapNameSchema } from "../schemas/validationSchemas.js";
 import { checkRateLimit } from "../services/cacheService.js";
@@ -56,7 +56,7 @@ export async function handleSlashFollow(interaction) {
     const withinLimit = await enforceRateLimit(interaction, {
         action: "follow",
         gerund: "following",
-        limit: CONFIG_VALUES.FOLLOW_RATE_LIMIT_PER_MINUTE,
+        limit: config.rateLimitFollowPerMinute,
         userId: sanitizedUserId
     });
     if (!withinLimit) return;
@@ -74,9 +74,9 @@ export async function handleSlashFollow(interaction) {
 
     // Checked after the duplicate test so re-following a listed map is never refused.
     const followCount = countUserFollows(sanitizedUserId);
-    if (followCount >= CONFIG_VALUES.MAX_FOLLOWS_PER_USER) {
+    if (followCount >= config.maxFollowsPerUser) {
         return interaction.reply({
-            content: `You are already following the maximum of ${CONFIG_VALUES.MAX_FOLLOWS_PER_USER} maps. Use \`/unfollow <map>\` to make room, or \`/unfollow all\` to start over.`,
+            content: `You are already following the maximum of ${config.maxFollowsPerUser} maps. Use \`/unfollow <map>\` to make room, or \`/unfollow all\` to start over.`,
             flags: MessageFlags.Ephemeral
         });
     }
@@ -101,7 +101,7 @@ export async function handleSlashUnfollow(interaction) {
     const withinLimit = await enforceRateLimit(interaction, {
         action: "unfollow",
         gerund: "unfollowing",
-        limit: CONFIG_VALUES.UNFOLLOW_RATE_LIMIT_PER_MINUTE,
+        limit: config.rateLimitUnfollowPerMinute,
         userId: sanitizedUserId
     });
     if (!withinLimit) return;

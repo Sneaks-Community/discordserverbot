@@ -1,9 +1,9 @@
 import { configLogger } from "../utils/logger.js";
-import { config, CONFIG_VALUES, ENV_ERRORS, ENV_WARNINGS } from "./config.js";
+import { config, ENV_ERRORS, ENV_WARNINGS } from "./config.js";
 import { ConfigError } from "./configError.js";
 import { serverObject, validateServersConfig } from "./servers.js";
 
-export { config, CONFIG_VALUES, ConfigError, serverObject };
+export { config, ConfigError, serverObject };
 
 /**
  * Reports the env findings envSchema made at import time, then checks servers.json.

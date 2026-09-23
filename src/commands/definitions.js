@@ -1,14 +1,13 @@
-/**
- * Every slash command; registration, dispatch and /help derive from it. Cyclic with
- * utilityCommands, so handlers must stay function declarations: a `const` throws TDZ.
- */
+/** Every slash command; registration, dispatch and /help derive from it. */
 
 import { SlashCommandBuilder } from "discord.js";
 
+import { createBaseEmbed } from "../embeds/baseEmbed.js";
+import { hasAdminRole } from "./adminAuth.js";
 import { handleSlashListallfollows, handleSlashRemoveuser, handleSlashTestnotify } from "./adminCommands.js";
 import { handleSlashFollow, handleSlashListfollows, handleSlashUnfollow } from "./followCommands.js";
 import { handleSlashKeywords, handleSlashPlayers } from "./playerCommands.js";
-import { handleSlashHelp, handleSlashPing } from "./utilityCommands.js";
+import { handleSlashPing } from "./utilityCommands.js";
 
 /**
  * @typedef {object} CommandDefinition
@@ -82,8 +81,17 @@ function formatUsage(def) {
  * @param {boolean} includeAdmin - Whether to list the admin-only commands
  * @returns {Array<{description: string, usage: string}>}
  */
-export function getHelpEntries(includeAdmin) {
+function getHelpEntries(includeAdmin) {
     return COMMAND_DEFINITIONS
         .filter(def => includeAdmin || !def.admin)
         .map(def => ({ description: def.description, usage: formatUsage(def) }));
+}
+
+/** @param {import('discord.js').ChatInputCommandInteraction} interaction */
+async function handleSlashHelp(interaction) {
+    // No footer: the command list is not a snapshot, so "Last Updated" misleads.
+    const embed = createBaseEmbed("List of commands", { footer: null })
+        .addFields(getHelpEntries(hasAdminRole(interaction)).map(({ description, usage }) => ({ name: usage, value: description })));
+
+    await interaction.reply({ embeds: [embed] });
 }

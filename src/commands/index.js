@@ -13,7 +13,7 @@ const slashCommands = buildSlashCommands();
  * @throws {Error} If the application ID is unavailable or either REST call fails
  */
 export async function registerSlashCommands(bot) {
-    const rest = new REST({ version: "10" }).setToken(config.discord.token);
+    const rest = new REST({ version: "10" }).setToken(config.discordToken);
 
     const applicationId = bot.application?.id || bot.user?.id;
     if (!applicationId) {
@@ -24,7 +24,7 @@ export async function registerSlashCommands(bot) {
     await rest.put(Routes.applicationCommands(applicationId), { body: [] });
 
     await rest.put(
-        Routes.applicationGuildCommands(applicationId, config.discord.guildID),
+        Routes.applicationGuildCommands(applicationId, config.discordGuildId),
         { body: slashCommands }
     );
     commandLogger.info(`Successfully registered ${slashCommands.length} guild slash commands`);

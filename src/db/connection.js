@@ -17,7 +17,7 @@ const statementCache = new Map();
  * lands on the persistent volume, not the container's writable layer.
  */
 export function initDB() {
-    const dbPath = config.database.path;
+    const dbPath = config.databasePath;
     dbLogger.info(`Initializing database at: ${dbPath}`);
     // A repeat call must not leak the previous connection or its statements.
     closeDB();

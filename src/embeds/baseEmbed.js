@@ -1,9 +1,9 @@
 import { EmbedBuilder } from "discord.js";
 
-import { CONFIG_VALUES } from "../config/index.js";
+import { config } from "../config/index.js";
 import { clampText, EMBED_TITLE_LIMIT } from "../utils/truncate.js";
 
-const LAST_UPDATED_FOOTER = { iconURL: CONFIG_VALUES.FALLBACK_AVATAR, text: "Last Updated" };
+const LAST_UPDATED_FOOTER = { iconURL: config.fallbackAvatarUrl, text: "Last Updated" };
 
 /**
  * Shared so call sites cannot drift. Each field falls back on its own because
@@ -28,7 +28,7 @@ export function createBaseEmbed(title, { footer = LAST_UPDATED_FOOTER } = {}) {
         // playerListEmbed interpolates a server name and a map into its title,
         // both of which arrive from the game server.
         .setTitle(clampText(title, EMBED_TITLE_LIMIT))
-        .setColor(CONFIG_VALUES.EMBED_COLOR)
+        .setColor(config.embedColor)
         .setTimestamp(Date.now());
 
     if (footer) embed.setFooter(footer);
