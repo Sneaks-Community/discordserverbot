@@ -67,14 +67,15 @@ export async function notifyUsers(mapName, serverObj, bot = botInstance) {
     const inCooldown = followers.length - deliverable.length;
 
     const recipients = deliverable.slice(0, CONFIG_VALUES.MAX_NOTIFICATION_RECIPIENTS);
-    if (recipients.length < deliverable.length) {
+    const overCap = deliverable.length - recipients.length;
+    if (overCap > 0) {
         serviceLogger.warn(
             {
                 cap: CONFIG_VALUES.MAX_NOTIFICATION_RECIPIENTS,
                 map: mapName,
                 notified: recipients.length,
                 server,
-                skipped: deliverable.length - recipients.length
+                skipped: overCap
             },
             "Notification fanout truncated by MAX_NOTIFICATION_RECIPIENTS"
         );
@@ -91,7 +92,7 @@ export async function notifyUsers(mapName, serverObj, bot = botInstance) {
     const outcomes = await Promise.all(recipients.map((user) => limit(() => deliverNotification(user, event))));
 
     // One fallback message per map change, not one per failing recipient.
-    const undeliverable = tallyUndeliverable(outcomes, inCooldown);
+    const undeliverable = tallyUndeliverable(outcomes, inCooldown, overCap);
     if (undeliverable.total > 0) {
         await sendFallbackNotification(event, undeliverable);
     }
@@ -113,13 +114,14 @@ export async function sendTestNotification(user, map) {
 /**
  * @param {string[]} outcomes - One DELIVERY value per attempted recipient
  * @param {number} inCooldown - Recipients skipped before the attempt
- * @returns {{failed: number, inCooldown: number, refused: number, total: number}}
+ * @param {number} overCap - Followers past MAX_NOTIFICATION_RECIPIENTS
+ * @returns {{failed: number, inCooldown: number, overCap: number, refused: number, total: number}}
  */
-function tallyUndeliverable(outcomes, inCooldown) {
+function tallyUndeliverable(outcomes, inCooldown, overCap) {
     const failed = outcomes.filter((outcome) => outcome === DELIVERY.failed).length;
     const refused = outcomes.filter((outcome) => outcome === DELIVERY.refused).length;
 
-    return { failed, inCooldown, refused, total: failed + refused + inCooldown };
+    return { failed, inCooldown, overCap, refused, total: failed + refused + inCooldown + overCap };
 }
 
 /**
@@ -128,15 +130,17 @@ function tallyUndeliverable(outcomes, inCooldown) {
  * @param {object} undeliverable - Tally from tallyUndeliverable
  * @param {number} undeliverable.failed
  * @param {number} undeliverable.inCooldown
+ * @param {number} undeliverable.overCap
  * @param {number} undeliverable.refused
  * @param {number} undeliverable.total
  * @returns {string}
  */
-function describeUndeliverable({ failed, inCooldown, refused, total }) {
+function describeUndeliverable({ failed, inCooldown, overCap, refused, total }) {
     const parts = [];
     if (refused > 0) parts.push(`${refused} refused the DM`);
     if (inCooldown > 0) parts.push(`${inCooldown} skipped after an earlier refusal`);
     if (failed > 0) parts.push(`${failed} failed`);
+    if (overCap > 0) parts.push(`${overCap} over the recipient cap`);
 
     return `_${total} follower${total === 1 ? "" : "s"} could not be DMed: ${parts.join(", ")}._`;
 }
@@ -275,7 +279,7 @@ async function resolveFallbackChannel(bot) {
 /**
  * The one message per map change covering every recipient it could not reach.
  * @param {object} event - Loop-invariant details shared by every recipient
- * @param {{failed: number, inCooldown: number, refused: number, total: number}} undeliverable
+ * @param {{failed: number, inCooldown: number, overCap: number, refused: number, total: number}} undeliverable
  * @returns {Promise<void>}
  */
 async function sendFallbackNotification(event, undeliverable) {
