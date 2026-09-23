@@ -23,11 +23,7 @@ function resolveLogLevel() {
     const raw = process.env.LOG_LEVEL;
     const result = logLevelSchema.safeParse(raw);
 
-    if (result.success) {
-        return { level: result.data };
-    }
-
-    return { invalid: raw, level: DEFAULT_LOG_LEVEL };
+    return result.success ? { level: result.data } : { invalid: raw, level: DEFAULT_LOG_LEVEL };
 }
 
 const { invalid: invalidLogLevel, level: logLevel } = resolveLogLevel();

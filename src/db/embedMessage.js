@@ -16,11 +16,7 @@ import { runStatement, validateOrThrow } from "./statements.js";
 export function getEmbedMessage() {
     const row = runStatement("SELECT channel_id, message_id FROM embed_message WHERE id = 1", [], "getEmbedMessage", "get");
 
-    if (!row) {
-        return null;
-    }
-
-    return { channelID: row.channel_id, messageID: row.message_id };
+    return row ? { channelID: row.channel_id, messageID: row.message_id } : null;
 }
 
 /**

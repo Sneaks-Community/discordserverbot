@@ -22,11 +22,7 @@ const ESCAPE_OPTIONS = {
  * @returns {string}
  */
 export function escapeForDiscord(text) {
-    if (typeof text !== "string") {
-        return String(text ?? "");
-    }
-
-    return escapeMarkdown(text, ESCAPE_OPTIONS);
+    return typeof text === "string" ? escapeMarkdown(text, ESCAPE_OPTIONS) : String(text ?? "");
 }
 
 /**
