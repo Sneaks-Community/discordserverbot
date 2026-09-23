@@ -1,4 +1,4 @@
-import Discord, { Events, GatewayIntentBits, Options, RESTJSONErrorCodes } from "discord.js";
+import Discord, { Events, GatewayIntentBits, Options, Partials, RESTJSONErrorCodes } from "discord.js";
 
 import { registerSlashCommands, handleInteraction } from "./commands/index.js";
 import { config, CONFIG_VALUES, validateConfig } from "./config/index.js";
@@ -57,15 +57,15 @@ const bot = new Discord.Client({
         // login fails with "Used disallowed intents".
         GatewayIntentBits.GuildMembers
     ],
+    partials: [Partials.GuildMember],
     presence: buildPresence(),
     // By default discord.js sweeps only threads and leaves the user and member
     // caches unbounded. Everything swept here is re-fetched on demand, and
     // bot.destroy() clears the intervals.
     sweepers: {
         ...Options.DefaultSweeperSettings,
-        // Keep the bot's own member: guild.members.me returns null if swept
-        // rather than re-fetching, and validateChannelForStatus reads that null as
-        // a missing permission and gives up on the channel for good.
+        // Keep the bot's own member: if swept, guild.members.me becomes a roleless
+        // partial and permission checks under-report.
         guildMembers: { filter: sweepAllButClient, interval: CACHE_SWEEP_INTERVAL_SECONDS },
         // Only the server list message is fetched, and it is re-fetched every tick.
         messages: { interval: CACHE_SWEEP_INTERVAL_SECONDS, lifetime: MESSAGE_CACHE_LIFETIME_SECONDS },
