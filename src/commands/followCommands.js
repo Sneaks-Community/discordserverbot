@@ -13,9 +13,7 @@ import { validateWithZod } from "../utils/zodValidator.js";
 /** @typedef {import('discord.js').InteractionResponse} Reply */
 
 /**
- * Validates the invoker's ID, replying itself if it is unusable, so callers only
- * have to check for null. Not shared with the admin commands: those validate an
- * ID typed as an option, a different check with a different message.
+ * Replies itself if the invoker's ID is invalid, so callers only check for null.
  * @param {Interaction} interaction
  * @returns {Promise<?string>} - The validated ID, or null if already replied to
  */
@@ -74,8 +72,7 @@ export async function handleSlashFollow(interaction) {
         return interaction.reply({ content: "You are already following this map.", flags: MessageFlags.Ephemeral });
     }
 
-    // Lifetime cap, checked after the duplicate test so re-following a map
-    // already on the list can never be refused.
+    // Checked after the duplicate test so re-following a listed map is never refused.
     const followCount = countUserFollows(sanitizedUserId);
     if (followCount >= CONFIG_VALUES.MAX_FOLLOWS_PER_USER) {
         return interaction.reply({
@@ -109,7 +106,6 @@ export async function handleSlashUnfollow(interaction) {
     });
     if (!withinLimit) return;
 
-    // "all" bypasses map name validation.
     if (rawMap.trim().toLowerCase() === "all") {
         unfollowAll(sanitizedUserId);
         await interaction.reply({ content: "You are no longer following any maps.", flags: MessageFlags.Ephemeral });
@@ -145,8 +141,7 @@ export async function handleSlashListfollows(interaction) {
         return interaction.reply({ content: "You are not following any maps.", flags: MessageFlags.Ephemeral });
     }
 
-    // Paged: MAX_FOLLOWS_PER_USER still allows a list past the embed description
-    // limit, which would reject the whole reply.
+    // Paged: MAX_FOLLOWS_PER_USER still allows a list past the embed description limit.
     const lines = follows.map((follow) => escapeForDiscord(follow.map_name));
 
     await replyWithPagedEmbed(interaction, {

@@ -21,8 +21,7 @@ export async function handleSlashListallfollows(interaction) {
         return interaction.reply({ content: "There are no users following any maps.", flags: MessageFlags.Ephemeral });
     }
 
-    // Paged rather than truncated: this grows with every follow in the database
-    // and an admin needs to read all of it.
+    // Paged rather than truncated: an admin needs the whole list, which grows with every follow.
     const lines = follows.map((follow) => `<@${follow.discord_id}>: ${follow.map_name}`);
 
     await replyWithPagedEmbed(interaction, {
@@ -34,8 +33,7 @@ export async function handleSlashListallfollows(interaction) {
 
 /**
  * @param {Interaction} interaction
- * @returns {Promise<void|import('discord.js').Message>} - Deferred, so the early
- *   returns carry an editReply result that no caller reads
+ * @returns {Promise<void|import('discord.js').Message>} - No caller reads it
  */
 export async function handleSlashTestnotify(interaction) {
     // The DM can outrun Discord's 3 second reply deadline. Every reply here is
@@ -80,7 +78,6 @@ export async function handleSlashRemoveuser(interaction) {
     }
 
     unfollowAll(userIdValidation.data);
-    // The only reply carrying a real mention in content rather than an embed.
-    // Mentions denied rather than relying on the ephemeral flag staying put.
+    // A real mention in content: deny pings rather than rely on the ephemeral flag staying put.
     await interaction.reply({ allowedMentions: { parse: [] }, content: `Removed all maps from user <@${userID}>.`, flags: MessageFlags.Ephemeral });
 }

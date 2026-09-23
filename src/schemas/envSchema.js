@@ -1,13 +1,6 @@
 /**
- * The single source of truth for what the bot accepts from its environment.
- * Nothing else reads process.env for a configuration value; consumers read the
- * shaped `config` object built in config/config.js.
- *
- * Throughout: unset or empty takes the documented default; an optional ID or URL
- * may be empty to disable its feature but must otherwise be well formed; numbers
- * must be whole and in range.
- *
- * LOG_LEVEL and NODE_ENV are the exceptions, both handled in utils/logger.js.
+ * The only process.env reader for configuration, bar LOG_LEVEL and NODE_ENV (utils/logger.js).
+ * Unset or empty takes the default; an empty optional ID or URL disables its feature.
  */
 
 import { ActivityType } from "discord.js";
@@ -53,8 +46,7 @@ function intEnv(defaultValue, min, max) {
 }
 
 /**
- * A hex color, stored as the 24-bit integer discord.js wants. The leading "#" is
- * optional because a pasted color often arrives without it.
+ * Parsed to the 24-bit integer discord.js wants; "#" is optional since pasted colors often lack it.
  * @param {string} defaultValue - Used when the variable is unset or empty
  * @returns {import('zod').ZodType}
  */
@@ -86,7 +78,6 @@ function optionalIdEnv() {
 }
 
 /**
- * A required URL variable that falls back to a default.
  * @param {string} defaultValue
  * @returns {import('zod').ZodType}
  */
@@ -100,8 +91,7 @@ function urlEnv(defaultValue) {
 const MAP_IMAGE_BASE_URL_DEFAULT = "https://bans.snksrv.com/images/maps/";
 
 /**
- * Base URL for map thumbnails, or "" to disable them. Cannot reuse urlEnv: this
- * one distinguishes unset (use the default) from explicitly empty (disable).
+ * Not urlEnv: unset takes the default but explicitly empty disables map images.
  * The trailing slash is required because getMapImage concatenates directly.
  */
 const mapImageBaseUrlEnv = z.preprocess(
@@ -115,10 +105,8 @@ const mapImageBaseUrlEnv = z.preprocess(
 );
 
 /**
- * The accepted BOT_ACTIVITY_TYPE values derive from these keys, so this is the
- * only list to extend. `custom` renders the text verbatim; the others have their
- * verb prepended by the client. Streaming is absent: it needs a Twitch or
- * YouTube URL, and this bot has none.
+ * BOT_ACTIVITY_TYPE values derive from these keys, so this is the only list to extend.
+ * Streaming is absent because it needs a Twitch or YouTube URL.
  */
 export const ACTIVITY_TYPE_BY_NAME = Object.freeze({
     competing: ActivityType.Competing,
@@ -137,10 +125,7 @@ const ACTIVITY_TEXT_MAX_LENGTH = 128;
 // Names no channel: where the commands are usable is the guild's decision.
 const ACTIVITY_TEXT_DEFAULT = "/follow <map> for map change alerts";
 
-/**
- * The presence text, or "" for no activity. Over-long is rejected rather than
- * truncated, so a status that would not display as written is an error.
- */
+/** Over-long text is rejected rather than truncated, so the status always displays as written. */
 const activityTextEnv = z.preprocess(
     (value) => (value === undefined ? ACTIVITY_TEXT_DEFAULT : String(value).trim()),
     z.string().max(ACTIVITY_TEXT_MAX_LENGTH, `must be at most ${ACTIVITY_TEXT_MAX_LENGTH} characters (Discord's activity limit), or empty to show no activity`)
@@ -153,16 +138,14 @@ export const LOG_LEVELS = Object.freeze(["trace", "debug", "info", "warn", "erro
 export const DEFAULT_LOG_LEVEL = "info";
 
 /**
- * Kept out of envSchema: pino throws on an unrecognized level at import time,
- * before a logger exists to say why. utils/logger.js applies this and degrades
- * to DEFAULT_LOG_LEVEL with a warning rather than aborting startup.
+ * Kept out of envSchema: pino throws on a bad level at import, before a logger exists to say why.
+ * utils/logger.js applies this and falls back to DEFAULT_LOG_LEVEL with a warning instead.
  */
 export const logLevelSchema = z.preprocess(
     (value) => (value === undefined || String(value).trim() === "" ? DEFAULT_LOG_LEVEL : String(value).trim().toLowerCase()),
     z.enum(LOG_LEVELS, { error: `must be one of: ${LOG_LEVELS.join(", ")}` })
 );
 
-/** The full contract. Unknown variables are ignored. */
 export const envSchema = z.object({
     ADMIN_ROLE_ID: optionalIdEnv(),
     BOT_ACTIVITY_TEXT: activityTextEnv,
@@ -183,17 +166,13 @@ export const envSchema = z.object({
             "is required and must be a Discord ID (17-19 digits)"
         )
     ),
-    // Trimmed: a pasted token often carries a newline, which Discord rejects at
-    // login with an unhelpful message.
     DISCORD_TOKEN: z.preprocess(
         (value) => (value === undefined ? "" : String(value).trim()),
         z.string().min(1, "is required and must not be empty")
     ),
-    // The channel the bot posts its server list in and then keeps editing. It
-    // owns that message, so nothing here identifies one; see db/embedMessage.js.
+    // No message ID is configured: the bot owns its server list message (db/embedMessage.js).
     EMBED_CHANNEL_ID: optionalIdEnv(),
-    // Six hex digits exactly: Discord takes a 24-bit RGB integer, and anything
-    // wider makes EmbedBuilder throw
+    // Exactly six digits: anything wider than 24-bit RGB makes EmbedBuilder throw
     EMBED_COLOR: hexColorEnv("#79C4D0"),
     FALLBACK_AVATAR_URL: urlEnv("https://i.imgur.com/cBiDnMi.png"),
     FALLBACK_CHANNEL_ID: optionalIdEnv(),
@@ -213,8 +192,7 @@ export const envSchema = z.object({
     MAX_CONCURRENT_QUERIES: intEnv(10, 1, 100),
     // Lifetime cap per user; the per-minute rate limit only paces accumulation.
     MAX_FOLLOWS_PER_USER: intEnv(50, 1, 10000),
-    // Recipients per map change. Discord quarantines bots for bulk DMs, so cap
-    // the fanout even though every DM here is opt-in via /follow.
+    // Per map change: Discord quarantines bots for bulk DMs, even opt-in ones.
     MAX_NOTIFICATION_RECIPIENTS: intEnv(200, 1, 10000),
     OFFLINE_SERVER_IMAGE: urlEnv("https://i.imgur.com/WnS0Biz.png"),
     RATE_LIMIT_FOLLOW_PER_MINUTE: intEnv(5, 1, 1000),
@@ -229,10 +207,7 @@ export const envSchema = z.object({
     USER_CACHE_TTL: intEnv(300, 1, 86400)
 });
 
-/**
- * Optional variables and what each one switches off. Empty is legal, so these
- * produce startup warnings rather than errors.
- */
+/** Empty is legal for these, so they produce startup warnings rather than errors. */
 const OPTIONAL_FEATURES = Object.freeze([
     { disables: "admin commands will be inaccessible", variable: "ADMIN_ROLE_ID" },
     { disables: "fallback notifications will be disabled", variable: "FALLBACK_CHANNEL_ID" },
@@ -240,9 +215,8 @@ const OPTIONAL_FEATURES = Object.freeze([
 ]);
 
 /**
- * Only used to materialize the schema's defaults after validation has already
- * failed, so startup aborts before these reach Discord. Every required variable
- * needs one, or that parse throws instead of reporting the real mistakes.
+ * Parsed only after validation fails, to materialize defaults. Every required variable
+ * needs a value here, or that parse throws instead of reporting the real mistakes.
  */
 const PLACEHOLDER_ENV = Object.freeze({
     DISCORD_GUILD_ID: "0".repeat(18),
@@ -250,9 +224,8 @@ const PLACEHOLDER_ENV = Object.freeze({
 });
 
 /**
- * Every optional feature is switched off by an empty string.
  * @param {object} values - Validated environment values
- * @returns {string[]} - Warning messages
+ * @returns {string[]}
  */
 function collectOptionalFeatureWarnings(values) {
     return OPTIONAL_FEATURES
@@ -283,9 +256,8 @@ export function parseEnv(env = process.env) {
         return { errors: [], values: result.data, warnings: collectOptionalFeatureWarnings(result.data) };
     }
 
-    // Startup aborts whenever errors is non-empty, so these values are never
-    // read; they exist so importing the config module cannot throw before a
-    // logger exists. Warnings stay empty: they would describe defaults.
+    // Never read (startup aborts on errors); they keep config import from throwing
+    // before a logger exists. Warnings stay empty: they would describe defaults.
     return {
         errors: result.error.issues.map(formatEnvIssue),
         values: envSchema.parse(PLACEHOLDER_ENV),

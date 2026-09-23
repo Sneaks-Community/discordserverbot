@@ -1,7 +1,4 @@
-/**
- * The error validateConfig raises instead of exiting, so index.js stays the
- * single exit point. Carries the collected failures for logging.
- */
+/** Raised by validateConfig instead of exiting, so index.js stays the single exit point. */
 export class ConfigError extends Error {
     /**
      * @param {string} message

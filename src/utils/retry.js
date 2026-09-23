@@ -1,10 +1,8 @@
 import { CONFIG_VALUES } from "../config/index.js";
 
 /**
- * Retries with exponential backoff. The attempt count is clamped, not trusted:
- * a `maxRetries` of 0 would skip the loop and return undefined, making every
- * caller a silent no-op.
- * @param {Function} fn - The async operation to attempt
+ * Exponential backoff. Attempts are clamped, since 0 would skip the loop and resolve undefined.
+ * @param {Function} fn
  * @param {object} [options]
  * @param {number} [options.baseDelay] - Base delay in milliseconds
  * @param {Function} [options.isRetryable] - Defaults to retrying everything
@@ -29,8 +27,6 @@ export async function withRetry(fn, options = {}) {
             return await fn();
         } catch (error) {
             lastError = error;
-            // A permanent failure (deleted message, missing permission) is thrown
-            // straight back rather than retried on a growing delay.
             if (i === attempts - 1 || !isRetryable(error)) break;
             // Equal jitter: half the backoff fixed, half random, so parallel retries
             // (one per configured embed) stop landing on the same tick.
@@ -39,7 +35,6 @@ export async function withRetry(fn, options = {}) {
         }
     }
 
-    // Only reached when every attempt threw, so lastError is set. Rethrowing here
-    // rather than in the loop is what stops the failure path resolving undefined.
+    // Every attempt threw; rethrowing here keeps the failure path from resolving undefined.
     throw lastError;
 }

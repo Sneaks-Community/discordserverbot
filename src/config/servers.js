@@ -1,7 +1,6 @@
 /**
- * The single place servers.json is read, plus its validation. Checking at
- * startup turns a typo into a precise message rather than a query failure or a
- * broken embed later on.
+ * The single place servers.json is read and validated, so a typo fails at
+ * startup with a precise message rather than as a broken query or embed.
  */
 
 import { readFileSync } from "node:fs";
@@ -13,10 +12,8 @@ import { formatZodPathSuffix } from "../utils/zodValidator.js";
 const SERVERS_PATH = new URL("../../servers.json", import.meta.url);
 
 /**
- * A read or parse failure, held as data rather than thrown. The file loads at
- * module load because consumers bind `serverObject` directly, which is too early
- * to report anything: a throw here lands before pino and validateConfig exist.
- * Holding the message routes it through the same ConfigError path instead.
+ * A read or parse failure, held rather than thrown: this runs at module load,
+ * before pino exists, so validateConfig reports it as a ConfigError instead.
  * @type {string | null}
  */
 let loadError = null;
@@ -31,18 +28,13 @@ function readServers() {
     try {
         return JSON.parse(readFileSync(SERVERS_PATH, "utf8"));
     } catch (err) {
-        // A missing file is the one failure with an obvious remedy; a syntax error is not.
         const hint = err.code === "ENOENT" ? " (copy servers.json.example to the project root; in Docker check the bind mount)" : "";
         loadError = `servers.json: ${err.message}${hint}`;
         return {};
     }
 }
 
-/**
- * Fields a server entry may define. Anything else is reported as an ignored
- * field rather than rejected, so a config carrying a removed option (such as
- * the `show` flag) still starts.
- */
+/** Unknown fields only warn, so a stale or misspelled one never blocks startup. */
 const KNOWN_SERVER_FIELDS = new Set(["ip", "keywords", "nick", "protocol"]);
 
 /**
@@ -76,8 +68,6 @@ function collectWarnings(servers) {
             warnings.push(`servers.json: "${name}" has unrecognized field(s) ${unknownFields.map((field) => `"${field}"`).join(", ")} which are ignored`);
         }
 
-        // Two entries pointing at the same address are queried twice every tick
-        // and appear twice in the embed
         if (typeof server.ip === "string") {
             const owner = addressOwners.get(server.ip);
             if (owner === undefined) {
@@ -87,8 +77,7 @@ function collectWarnings(servers) {
             }
         }
 
-        // getServerByKeyword also matches a server's position in the list, so a
-        // numeric keyword is ambiguous with an index lookup
+        // getServerByKeyword also accepts a list index, so a numeric keyword is ambiguous.
         if (Array.isArray(server.keywords)) {
             for (const keyword of server.keywords) {
                 if (typeof keyword === "string" && /^\d+$/.test(keyword)) {
@@ -116,8 +105,7 @@ export function validateServersConfig(servers = serverObject) {
     if (!result.success) {
         return {
             errors: result.error.issues.map(formatIssue),
-            // A failed parse means the entries need not have the shape
-            // collectWarnings reads, and startup aborts on errors anyway.
+            // collectWarnings assumes a parsed shape, and startup aborts on errors anyway.
             warnings: []
         };
     }

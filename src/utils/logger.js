@@ -1,12 +1,6 @@
 /**
- * Call convention: object first, message second.
- *     logger.error({ err }, "Failed to refresh server data");
- * Pino reads a leading string as the message and later arguments as printf
- * values, so `logger.error("Failed:", err)` discards the error and its stack.
- * The `no-restricted-syntax` rules in eslint.config.js enforce this.
- *
- * Log through one of the child loggers below so every line carries its `module`
- * binding, which is what makes per-subsystem filtering possible.
+ * Pass the object first: pino reads later arguments as printf values, so
+ * `logger.error("Failed:", err)` drops the error. eslint's no-restricted-syntax enforces this.
  */
 
 import pino from "pino";
@@ -14,9 +8,7 @@ import pino from "pino";
 import { DEFAULT_LOG_LEVEL, LOG_LEVELS, logLevelSchema } from "../schemas/envSchema.js";
 
 /**
- * Applied here rather than in the fatal validation path: pino throws on an
- * unrecognized level at import time, before a logger exists to report why, so
- * an unusable value degrades to the default instead of stopping the process.
+ * Degrades to the default: pino throws on a bad level before a logger exists to say why.
  * @returns {{ level: string, invalid?: string }} - `invalid` holds any rejected value
  */
 function resolveLogLevel() {
@@ -98,17 +90,14 @@ export const mainLogger = logger.child({ module: "main" });
 const FLUSH_TIMEOUT_MS = 1000;
 
 /**
- * Drains the logger before the process exits. Matters in development, where the
- * pino `transport` writes through a worker thread and a process.exit() in the
- * same tick discards whatever it still holds. Production JSON to stdout is
- * synchronous, so this is a no-op there.
+ * Needed in development, where the pino `transport` worker thread loses buffered lines on a
+ * same-tick process.exit(). Production JSON to stdout is synchronous, so this is a no-op there.
  * @returns {Promise<void>} Resolves once drained, or on timeout
  */
 export function flushLogs() {
     return new Promise((resolve) => {
-        // Not unref'd: thread-stream waits on the worker with Atomics.waitAsync,
-        // which does not hold the loop open, so an unref'd timer would let Node
-        // exit before the flush settles. Cleared below, so it costs nothing.
+        // Not unref'd: thread-stream's Atomics.waitAsync does not hold the loop open,
+        // so an unref'd timer would let Node exit before the flush settles.
         const timer = setTimeout(resolve, FLUSH_TIMEOUT_MS);
 
         // A flush error is not actionable; the caller is already on its way out.

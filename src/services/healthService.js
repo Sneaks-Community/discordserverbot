@@ -1,10 +1,6 @@
 /**
- * Liveness for the container HEALTHCHECK: is the tick loop still turning.
- *
- * Discord state is reported but never gating. The gateway drops for reasons the
- * container cannot fix and discord.js reconnects on its own, so failing health
- * there would restart a process that was already recovering. The unrecoverable
- * case exits on its own, through bot.js's ShardDisconnect handler.
+ * Container HEALTHCHECK liveness: is the tick loop turning. Discord state never gates it, since
+ * discord.js reconnects on its own and bot.js's ShardDisconnect handler exits when it cannot.
  */
 
 import http from "node:http";

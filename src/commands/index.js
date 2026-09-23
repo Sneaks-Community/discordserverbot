@@ -20,8 +20,7 @@ export async function registerSlashCommands(bot) {
         throw new Error("Unable to get application ID - bot may not be fully initialized");
     }
 
-    // Global and guild commands are separate sets, so anything an earlier run
-    // registered globally would stay visible in every guild forever.
+    // Separate from guild commands: stale global ones would show in every guild forever.
     await rest.put(Routes.applicationCommands(applicationId), { body: [] });
 
     await rest.put(
@@ -50,8 +49,7 @@ export async function handleInteraction(interaction) {
     const username = interaction.user?.username || "unknown";
 
     try {
-        // The same array Discord was registered from, so anything it can send has
-        // a handler here by construction.
+        // Same array Discord was registered from, so every command it can send has a handler.
         const command = COMMANDS_BY_NAME.get(commandName);
         if (!command) {
             await interaction.reply({ content: "Unknown command.", flags: MessageFlags.Ephemeral });

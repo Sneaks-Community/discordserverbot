@@ -1,7 +1,6 @@
 /**
- * Discord 400s the whole request when a payload passes one of these limits, and
- * the user sees only a generic "An error occurred". Any listing that grows with
- * real usage has to be bounded before it is sent.
+ * Discord 400s the whole request when a payload passes one of these limits and the user
+ * sees only a generic error, so any listing that grows with usage must be bounded first.
  */
 
 export const EMBED_DESCRIPTION_LIMIT = 4096;
@@ -28,8 +27,7 @@ export function clampText(value, limit) {
     const text = typeof value === "string" ? value : String(value ?? "");
     if (text.length <= limit) return text;
 
-    // The marker has to fit inside the limit too, so a limit below 1 has room
-    // for nothing at all.
+    // The marker counts toward the limit, so a limit below 1 has room for nothing.
     return limit < 1 ? "" : text.slice(0, limit - 1) + "\u2026";
 }
 
@@ -43,16 +41,14 @@ function defaultSuffix(remaining) {
 }
 
 /**
- * Joins lines, stopping before `limit` and reporting what was left out. Non- and
- * empty strings are dropped first, so callers can pass a raw mapped array. The
- * worst-case notice length is reserved up front, so the notice itself can never
- * push the result back over.
- * @param {string[]} lines - Lines to join
- * @param {number} limit - Maximum length of the returned string
- * @param {object} [options] - Options
+ * Joins lines up to `limit`, noting how many were cut. Non-strings and empties are dropped.
+ * The worst-case notice length is reserved up front so the notice can never push the result over.
+ * @param {string[]} lines
+ * @param {number} limit
+ * @param {object} [options]
  * @param {string} [options.separator] - Separator between lines, default newline
  * @param {Function} [options.suffix] - Builds the overflow notice from a remaining count
- * @returns {string} The joined text, never longer than `limit`
+ * @returns {string} Never longer than `limit`
  */
 export function joinWithinLimit(lines, limit, { separator = "\n", suffix = defaultSuffix } = {}) {
     const items = lines.filter((line) => typeof line === "string" && line.length > 0);
@@ -78,9 +74,8 @@ export function joinWithinLimit(lines, limit, { separator = "\n", suffix = defau
         used += cost;
     }
 
-    // Not even the first line fits, so hard-truncate it rather than returning an
-    // empty description. The final slice is the invariant: whatever the caller's
-    // suffix does, the result is never longer than the limit.
+    // Not even the first line fits, so hard-truncate it rather than return empty. The final
+    // slice keeps the result within the limit whatever the caller's suffix does.
     if (kept.length === 0) {
         const notice = items.length > 1 ? suffix(items.length - 1) : "";
         const head = items[0].slice(0, Math.max(0, limit - notice.length - 1));

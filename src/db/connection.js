@@ -23,19 +23,13 @@ export function initDB() {
     statementCache.clear();
     db = new Database(dbPath);
     db.pragma("journal_mode = WAL");
-    // Wait instead of throwing SQLITE_BUSY when the file is locked, which a WAL
-    // checkpoint or an open sqlite3 shell can both cause. better-sqlite3 is
-    // synchronous, so this blocks the process; 5s outlasts a checkpoint without
-    // looking like a hang.
+    // Wait out a WAL checkpoint or open sqlite3 shell instead of throwing SQLITE_BUSY.
+    // better-sqlite3 blocks the process meanwhile; 5s outlasts a checkpoint.
     db.pragma("busy_timeout = 5000");
 
     const initTransaction = db.transaction(() => {
-        // ON CONFLICT REPLACE: re-following a map swaps in a clean row. It changes
-        // the rowid, which is safe here because nothing references this table.
-        //
-        // NOT NULL only binds new databases: CREATE TABLE IF NOT EXISTS leaves an
-        // existing table alone. No migration needed, because every write goes
-        // through the Zod schemas in follows.js, which reject a null or empty id.
+        // REPLACE changes the rowid, safe because nothing references this table.
+        // NOT NULL binds only new databases; follows.js's Zod schemas guard old ones.
         db.exec(`
             CREATE TABLE IF NOT EXISTS players_follow (
                 discord_id TEXT NOT NULL,
@@ -46,9 +40,7 @@ export function initDB() {
         db.exec("CREATE INDEX IF NOT EXISTS idx_map_name ON players_follow(map_name)");
         db.exec("CREATE INDEX IF NOT EXISTS idx_discord_id ON players_follow(discord_id)");
 
-        // CHECK (id = 1): the bot maintains exactly one server list message, so
-        // "at most one row" is the table's own invariant rather than a promise
-        // the writing code has to keep.
+        // CHECK (id = 1): one server list message is the table's own invariant.
         db.exec(`
             CREATE TABLE IF NOT EXISTS embed_message (
                 id INTEGER PRIMARY KEY CHECK (id = 1),

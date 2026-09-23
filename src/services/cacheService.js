@@ -12,7 +12,6 @@ const dmRefusals = new Map();
 
 const DM_REFUSAL_COOLDOWN_MS = 3600000;
 
-// Caps, so none of the three maps can grow without bound.
 const MAX_USER_CACHE_SIZE = 1000;
 const MAX_RATE_LIMIT_MAP_SIZE = 5000;
 const MAX_DM_REFUSAL_SIZE = 5000;
@@ -28,9 +27,8 @@ const CLEANUP_INTERVAL_MS = 300000;
 export async function getCachedUser(userId, bot) {
     const cached = userCache.get(userId);
     if (cached && Date.now() - cached.timestamp < CONFIG_VALUES.USER_CACHE_TTL) {
-        // Re-inserting on a hit is what makes the eviction below LRU. The
-        // timestamp rides along untouched: the TTL measures how stale the
-        // fetched user is, not how long ago it was read.
+        // Re-inserting on a hit makes eviction LRU. The timestamp stays: the TTL
+        // measures how stale the fetched user is, not when it was last read.
         userCache.delete(userId);
         userCache.set(userId, cached);
         return cached.user;
@@ -211,7 +209,6 @@ function cleanupDmRefusals() {
 /** @type {NodeJS.Timeout[]} */
 let cleanupIntervalRefs = [];
 
-/** Handles stay module-private; clearCleanupIntervals is what cancels them. */
 export function startCleanupIntervals() {
     cleanupIntervalRefs.push(setInterval(cleanupUserCache, CLEANUP_INTERVAL_MS));
     cleanupIntervalRefs.push(setInterval(cleanupRateLimits, CLEANUP_INTERVAL_MS));

@@ -6,16 +6,13 @@ import { serverObject, validateServersConfig } from "./servers.js";
 export { config, CONFIG_VALUES, ConfigError, serverObject };
 
 /**
- * Reports the ENV_ERRORS and ENV_WARNINGS envSchema produced at import time,
- * then checks the one input that is not environmental, servers.json. Throws
- * rather than exits, so the caller owns the exit and this stays testable.
+ * Reports the env findings envSchema made at import time, then checks servers.json.
+ * Throws rather than exits, so the caller owns the exit and this stays testable.
  * @returns {{ warnings: string[] }} - The non-fatal findings, already logged
  * @throws {ConfigError} If the environment or servers.json is unusable
  */
 export function validateConfig() {
-    // First and fatal: once envSchema rejects anything, every value in `config`
-    // has fallen back to its default, so nothing after this describes the
-    // operator's actual configuration.
+    // First: on any env error `config` holds only defaults, so later checks would mislead.
     if (ENV_ERRORS.length > 0) {
         throw new ConfigError(
             "Invalid environment variables; fix the values listed in errors (see .env.example for the accepted range of each)",
@@ -23,7 +20,6 @@ export function validateConfig() {
         );
     }
 
-    // A bad entry here breaks server queries or the embed rather than startup
     const servers = validateServersConfig();
     const warnings = [...ENV_WARNINGS, ...servers.warnings];
 

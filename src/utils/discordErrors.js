@@ -1,8 +1,6 @@
 /**
- * Splits Discord failures into retryable and terminal, so a permanent condition
- * is not retried on backoff forever with only a generic failure in the log. Each
- * terminal code carries its remediation: these are setup mistakes or recipient
- * conditions, not runtime faults.
+ * Splits Discord failures into retryable and terminal, so setup mistakes and recipient
+ * conditions are logged with their remediation instead of retried on backoff forever.
  */
 
 import { RESTJSONErrorCodes } from "discord.js";
@@ -21,10 +19,7 @@ const TERMINAL_API_CODES = new Map([
     [RESTJSONErrorCodes.CannotSendMessagesToThisUserDueToHavingNoMutualGuilds, "Cannot send messages to this user: the bot no longer shares a guild with them"]
 ]);
 
-/**
- * A failure that will never succeed on a retry, raised by our own pre-checks
- * rather than by Discord. Carries its own remediation text.
- */
+/** A non-retryable failure raised by our own pre-checks rather than by Discord. */
 export class TerminalError extends Error {
     /**
      * @param {string} message - What failed
@@ -52,9 +47,8 @@ export function getTerminalReason(error) {
 }
 
 /**
- * The terminal codes describing the recipient rather than the request. Separate
- * because they are the only ones worth remembering: nothing the bot does helps
- * until the user reopens their DMs or rejoins.
+ * Terminal codes about the recipient, not the request: the only ones worth remembering,
+ * since nothing helps until the user reopens their DMs or rejoins.
  * @type {Set<number>}
  */
 const RECIPIENT_REFUSAL_CODES = new Set([

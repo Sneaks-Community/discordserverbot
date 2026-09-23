@@ -1,8 +1,6 @@
 /**
- * Button-driven pagination, for listings that would otherwise pass the embed
- * description limit and fail the whole request. Buttons are collected on the
- * reply itself, so nothing is persisted and no global component router is
- * needed; the collector ends after PAGE_IDLE_MS and disables them in place.
+ * Button pagination for listings past the embed description limit. Buttons are collected on
+ * the reply itself, so nothing is persisted and no global component router is needed.
  */
 
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, MessageFlags } from "discord.js";
@@ -11,11 +9,9 @@ import { createBaseEmbed } from "../embeds/baseEmbed.js";
 import { commandLogger } from "./logger.js";
 import { EMBED_DESCRIPTION_LIMIT } from "./truncate.js";
 
-/** Stop listening after this long without a button press. */
 const PAGE_IDLE_MS = 120_000;
 
-// Inside the 15 minute interaction token, after which the buttons can no longer
-// be disabled.
+// Inside the 15 minute interaction token, after which the buttons can no longer be disabled.
 const PAGE_MAX_MS = 14 * 60 * 1000;
 
 /** Lines per page, so a page stays readable well before the character limit. */
@@ -61,12 +57,11 @@ export function paginateLines(lines, { limit = EMBED_DESCRIPTION_LIMIT, maxLines
 }
 
 /**
- * A single page is a plain embed with no components; only a real overflow adds
- * buttons.
+ * A single page is a plain embed; only a real overflow adds buttons.
  * @param {import('discord.js').ChatInputCommandInteraction} interaction
  * @param {object} options
  * @param {boolean} [options.ephemeral]
- * @param {string[]} options.lines - The listing, one entry per line
+ * @param {string[]} options.lines
  * @param {string} options.title
  * @returns {Promise<void>}
  */

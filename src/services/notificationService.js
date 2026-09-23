@@ -14,7 +14,7 @@ import { checkRateLimit, getCachedUser, isDmRefused, markDmRefused } from "./cac
 
 let botInstance = null;
 
-// Per user per map per minute. Not configurable: above 1 just means sending the
+// Per user per map per minute. Not configurable: above 1 just resends the
 // duplicate. The overall ceiling is RATE_LIMIT_NOTIFICATION_PER_MINUTE.
 const NOTIFICATION_MAX_PER_MAP = 1;
 
@@ -40,9 +40,8 @@ export function initNotificationService(bot) {
 
 /**
  * @param {string} mapName - As normalized by getInfo
- * @param {object} serverObj - The server the change happened on
- * @param {import('discord.js').Client} [bot] - Defaults to the client set via
- *   initNotificationService
+ * @param {object} serverObj
+ * @param {import('discord.js').Client} [bot] - Defaults to the initNotificationService client
  * @returns {Promise<void>}
  */
 export async function notifyUsers(mapName, serverObj, bot = botInstance) {
@@ -52,8 +51,7 @@ export async function notifyUsers(mapName, serverObj, bot = botInstance) {
     // port, and steam://connect needs the port the game actually listens on.
     const ip = serverObj?.fullIP ?? serverObj?.ip ?? "unknown IP";
 
-    // Game servers can report names the follow schema rejects, and nobody can be
-    // following one of those. Treated as "no followers" rather than thrown: an
+    // Names the follow schema rejects have no followers. Returned, not thrown: an
     // escaping throw would stall map-change detection for this server.
     const validatedMap = validateWithZod(mapNameSchema, mapName, "notifyUsers/map");
     if (!validatedMap.valid) {
@@ -63,13 +61,10 @@ export async function notifyUsers(mapName, serverObj, bot = botInstance) {
 
     const followers = getUsersFollowingMap(validatedMap.data);
 
-    // Dropped before the cap, so the fanout budget goes to people who can
-    // actually receive a DM.
+    // Dropped before the cap, so the fanout budget goes to users who can receive a DM.
     const deliverable = followers.filter((follower) => !isDmRefused(follower.discord_id));
     const inCooldown = followers.length - deliverable.length;
 
-    // Logged when it bites: a map that suddenly has hundreds of followers should
-    // be visible rather than discovered later.
     const recipients = deliverable.slice(0, CONFIG_VALUES.MAX_NOTIFICATION_RECIPIENTS);
     if (recipients.length < deliverable.length) {
         serviceLogger.warn(
@@ -84,8 +79,7 @@ export async function notifyUsers(mapName, serverObj, bot = botInstance) {
         );
     }
 
-    // Built once per event, from the validated lowercase name that follows are
-    // stored under.
+    // The validated lowercase name, the form follows are stored under.
     const mapImage = getMapImage(validatedMap.data);
 
     const event = { bot, ip, mapImage, mapName, server, serverObj, validatedMapName: validatedMap.data };
@@ -237,8 +231,7 @@ async function deliverNotification(user, event) {
         const reason = getTerminalReason(e);
 
         if (isRecipientRefusal(e)) {
-            // A refusal belongs to the recipient and only they can change it, so
-            // remember it and skip them until the cooldown expires.
+            // Only the recipient can undo a refusal, so skip them until the cooldown expires.
             markDmRefused(userId);
             serviceLogger.warn({ err: e, map: mapName, userId }, `DM refused by Discord, skipping this recipient until the cooldown expires. ${reason}`);
             return DELIVERY.refused;
@@ -255,9 +248,8 @@ async function deliverNotification(user, event) {
 }
 
 /**
- * Fetches on a cache miss: the cache only holds channels the gateway has
- * mentioned, so a cache-only lookup fails permanently after a restart until
- * something happens in that channel.
+ * Fetches on a cache miss: the cache only holds channels the gateway has mentioned,
+ * so after a restart a cache-only lookup fails until that channel sees activity.
  * @param {import('discord.js').Client} bot
  * @returns {Promise<object>} - The resolved channel
  * @throws {TerminalError} If the channel does not resolve, or is in another guild
@@ -298,15 +290,13 @@ async function sendFallbackNotification(event, undeliverable) {
     // so an explicitly passed client is honoured.
     const { bot, mapName } = event;
 
-    // Nothing to fall back to, so nothing to retry. Without this an unconfigured
-    // fallback costs three retried throws, with backoff, per failed DM.
+    // Without this, an unconfigured fallback costs three retried throws with backoff.
     if (!config.fallback.channelID) {
         serviceLogger.debug({ map: mapName, undeliverable: undeliverable.total }, "No fallback channel configured, skipping fallback notification");
         return;
     }
 
-    // Only reachable if initNotificationService was never called and no client
-    // was passed; otherwise the retries are three TypeErrors deep in withRetry.
+    // No init and no client passed. Without this, withRetry burns three TypeErrors.
     if (!bot) {
         serviceLogger.error({ map: mapName }, "No Discord client available, skipping fallback notification");
         return;

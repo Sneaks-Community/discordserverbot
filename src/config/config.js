@@ -3,8 +3,7 @@ import { ACTIVITY_TYPE_BY_NAME, parseEnv } from "../schemas/envSchema.js";
 const { errors, values: env, warnings } = parseEnv();
 
 /**
- * Acted on by validateConfig(). Non-empty means every value below has fallen
- * back to its default and must not be trusted.
+ * Non-empty means every value below fell back to its default and must not be trusted.
  * @type {string[]}
  */
 export const ENV_ERRORS = errors;
@@ -24,9 +23,8 @@ function toMs(seconds) {
 }
 
 /**
- * envSchema has already range-checked everything here, so consumers can treat
- * these as trusted: whole in-range numbers, snowflake-or-empty IDs, absolute
- * http(s) URLs.
+ * Already range-checked by envSchema: whole in-range numbers, snowflake-or-empty
+ * IDs and absolute http(s) URLs, so consumers need not re-validate.
  */
 const baseConfig = {
     // `type` is already the discord.js ActivityType; empty `text` shows nothing.

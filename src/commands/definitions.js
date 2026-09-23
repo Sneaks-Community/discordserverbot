@@ -1,12 +1,6 @@
 /**
- * The single declaration of every slash command. What Discord registers, what
- * the dispatcher routes and what /help lists all derive from this array.
- *
- * utilityCommands imports getHelpEntries from here, so /help's handler makes
- * this module part of an import cycle. That is only harmless because every
- * handler is an exported function declaration, which ESM hoists before any
- * module body runs; turning one into a `const` arrow breaks startup with a TDZ
- * error.
+ * Every slash command; registration, dispatch and /help derive from it. Cyclic with
+ * utilityCommands, so handlers must stay function declarations: a `const` throws TDZ.
  */
 
 import { SlashCommandBuilder } from "discord.js";
@@ -19,7 +13,7 @@ import { handleSlashHelp, handleSlashPing } from "./utilityCommands.js";
 /**
  * @typedef {object} CommandDefinition
  * @property {boolean} admin - Whether the admin role is required
- * @property {string} description - The description Discord shows
+ * @property {string} description
  * @property {Function} handler
  * @property {string} name
  * @property {Function} [options] - Adds the command's string option, if it takes one
@@ -44,10 +38,7 @@ const COMMAND_DEFINITIONS = Object.freeze([
         options: opt => opt.setName("userid").setDescription("Discord user ID").setRequired(true) }
 ]);
 
-/**
- * For the dispatcher's O(1) lookup.
- * @type {Map<string, CommandDefinition>}
- */
+/** @type {Map<string, CommandDefinition>} */
 export const COMMANDS_BY_NAME = new Map(COMMAND_DEFINITIONS.map(def => [def.name, def]));
 
 /**
@@ -71,7 +62,6 @@ function buildCommand(def) {
 }
 
 /**
- * Every command in the shape the registration endpoint takes.
  * @returns {Array<import('discord.js').RESTPostAPIChatInputApplicationCommandsJSONBody>}
  */
 export function buildSlashCommands() {
@@ -79,7 +69,6 @@ export function buildSlashCommands() {
 }
 
 /**
- * Reads the options back off the built payload rather than restating them.
  * @param {CommandDefinition} def
  * @returns {string} - e.g. `/players [server]`
  */

@@ -1,19 +1,12 @@
-/**
- * The two things every query in this directory does: validate its inputs, then
- * run a cached prepared statement. Shared so each table module is only its own
- * SQL.
- */
-
 import { dbLogger } from "../utils/logger.js";
 import { validateWithZod } from "../utils/zodValidator.js";
 import { getStatement } from "./connection.js";
 
 /**
- * Helper to validate and execute database operations using Zod v4 schemas
- * @param {import('zod').ZodType} schema - Zod v4 schema to validate against
- * @param {any} value - Value to validate
- * @param {string} operationName - Name of the operation for error messages
- * @returns {any} Validated and transformed value
+ * @param {import('zod').ZodType} schema
+ * @param {any} value
+ * @param {string} operationName - Label for the error message
+ * @returns {any} The parsed value, with schema transforms applied
  */
 export function validateOrThrow(schema, value, operationName) {
     const result = validateWithZod(schema, value, operationName);
@@ -24,12 +17,11 @@ export function validateOrThrow(schema, value, operationName) {
 }
 
 /**
- * Run a statement with error handling, reusing a cached prepared statement
- * @param {string} sql - SQL statement
- * @param {Array} params - Parameters for the statement
- * @param {string} operationName - Name of the operation for error logging
+ * @param {string} sql
+ * @param {Array} params
+ * @param {string} operationName - Label for the error log
  * @param {"all" | "get" | "run"} mode - better-sqlite3 method to invoke
- * @returns {any} Result of the operation
+ * @returns {any}
  */
 export function runStatement(sql, params, operationName, mode) {
     const stmt = getStatement(sql);

@@ -9,9 +9,8 @@ import { createBaseEmbed, formatPlayerCounts } from "./baseEmbed.js";
 const FOOTER_ALLOWANCE = 64;
 
 /**
- * Describe an interval in words, e.g. "45 seconds", "1.5 minutes". Minutes keep
- * one decimal so the default 90s does not read as "2 minutes".
- * @param {number} ms - The interval in milliseconds
+ * Minutes keep one decimal so the default 90s does not read as "2 minutes".
+ * @param {number} ms
  * @returns {string} - e.g. "45 seconds", "1 minute", "1.5 minutes"
  */
 export function describeInterval(ms) {
@@ -33,10 +32,8 @@ export function makeEmbed(serverData) {
     const description = `This list is updated every ${describeInterval(CONFIG_VALUES.EMBED_UPDATE_INTERVAL_MS)}.`;
     const embed = createBaseEmbed(title).setDescription(description);
 
-    // Every field here is built from a game server's own reply, so both the
-    // per-field limit and the embed-wide total are enforced rather than assumed.
-    // Passing either 400s the edit, and the list then freezes until the next tick
-    // that happens to fit.
+    // Fields come from game server replies, so both limits are enforced: passing
+    // either 400s the edit and freezes the list until a tick that fits.
     let used = title.length + description.length + FOOTER_ALLOWANCE;
     let dropped = 0;
 

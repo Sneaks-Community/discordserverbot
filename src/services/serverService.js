@@ -12,9 +12,8 @@ let _isRefreshing = false;
 let _isNotifying = false;
 
 /**
- * Bounds one gamedig attempt rather than inheriting its 10s default. maxRetries
- * multiplies over the ports gamedig tries, so that default lets one unreachable
- * server occupy most of an update interval.
+ * Bounds one gamedig attempt: its 10s default, multiplied by maxRetries over the
+ * ports tried, lets one unreachable server occupy most of an update interval.
  */
 const QUERY_ATTEMPT_TIMEOUT_MS = 3000;
 
@@ -22,9 +21,8 @@ const QUERY_ATTEMPT_TIMEOUT_MS = 3000;
 const QUERY_SOCKET_TIMEOUT_MS = 2000;
 
 /**
- * Share of the update interval a refresh pass may spend querying. Under 1 so a
- * pass cannot run into the next tick, where the _isRefreshing guard would drop
- * it and the embed would republish a stale snapshot as current.
+ * Under 1 so a pass ends before the next tick, where the _isRefreshing guard
+ * would drop it and the embed would republish a stale snapshot as current.
  */
 const REFRESH_BUDGET_FRACTION = 0.8;
 
@@ -49,7 +47,7 @@ export function isServerDataEmpty() {
     return Object.keys(_serverData).length === 0;
 }
 
-/** @param {object} newData - The snapshot refresh() just built */
+/** @param {object} newData */
 function setServerData(newData) {
     _serverData = { ...newData };
 }
@@ -71,7 +69,7 @@ export function getServerByKeyword(keyword) {
  * Replaces an unusable name rather than dropping the row, which would hide the
  * player and understate the count.
  * @param {object} entry - A gamedig player or bot entry
- * @param {string} fallback - Name to use when the real one is unusable
+ * @param {string} fallback
  * @param {string} label - Field label for the validation message
  * @returns {object}
  */
@@ -154,9 +152,8 @@ export async function getInfo(server, index) {
 
         data = {
             bots: sanitizedBots,
-            // Whatever the server chose to answer with, and it reaches an embed
-            // field, the DM's steam:// link and the fallback message. Falls back
-            // to the configured address when the reply carries no usable one.
+            // Server-supplied, and it reaches an embed field, the DM's steam://
+            // link and the fallback message, hence the clamp.
             fullIP: (typeof res.connect === "string" ? res.connect : server.ip).slice(0, SERVER_IP_MAX_LENGTH),
             index: index,
             keywords: server.keywords,
@@ -176,9 +173,8 @@ export async function getInfo(server, index) {
 }
 
 /**
- * The gamedig timeouts bound one attempt each and MAX_CONCURRENT_QUERIES only
- * batches the list, so this is what bounds the whole pass. Giving up returns the
- * offline shape, which means the same thing to a caller: no live data this tick.
+ * The only bound on the whole pass; gamedig timeouts bound one attempt each and
+ * the concurrency limit only batches. Giving up returns the offline shape.
  * @param {string} name - Server key in serverObject, for logging
  * @param {object} server - The servers.json entry
  * @param {number} index - Its 1-based position in the list
@@ -250,9 +246,8 @@ export async function refresh() {
     } finally {
         _isRefreshing = false;
 
-        // Against the interval, not the budget: hitting the budget is the
-        // deadline working and is logged per server, but passing the interval
-        // means it did not hold and the next tick is lost.
+        // Against the interval, not the budget: hitting the budget is the deadline
+        // working, passing the interval means it failed and the next tick is lost.
         const elapsedMs = Date.now() - startedAt;
         if (elapsedMs > CONFIG_VALUES.EMBED_UPDATE_INTERVAL_MS) {
             serviceLogger.warn({ elapsedMs, intervalMs: CONFIG_VALUES.EMBED_UPDATE_INTERVAL_MS }, "Refresh pass outlasted the update interval; the next tick will be skipped");
@@ -298,9 +293,8 @@ export async function updateServerData(notifyCallback) {
 
                 if (notifyCallback) {
                     try {
-                        // A fresh object: writing live counts onto
-                        // serverObject[currentServer] would pollute the loaded
-                        // servers.json that /keywords and validation read.
+                        // A fresh object: live counts written onto serverObject
+                        // would pollute the servers.json /keywords and validation read.
                         await notifyCallback(newMap, {
                             ...currentServerObject,
                             fullIP: live.fullIP,
@@ -309,7 +303,6 @@ export async function updateServerData(notifyCallback) {
                             numPlayers: live.numPlayers
                         });
                     } catch (err) {
-                        // Contained per server so the remaining servers still get notified.
                         serviceLogger.error({ err, map: newMap, server: currentServer }, "Map change notification failed");
                     }
                 }

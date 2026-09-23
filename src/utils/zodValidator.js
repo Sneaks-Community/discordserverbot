@@ -1,7 +1,5 @@
 /**
- * Render the nested part of a Zod issue path as an accessor chain, e.g.
- * `[0].channelID`. Callers pass the segments after the first and prefix that
- * one themselves.
+ * Renders a Zod issue path as an accessor chain, e.g. `[0].channelID`.
  * @param {ReadonlyArray<string|number|symbol>} path - Issue path after the first segment
  * @returns {string}
  */

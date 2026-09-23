@@ -6,9 +6,8 @@ import { clampText, EMBED_TITLE_LIMIT } from "../utils/truncate.js";
 const LAST_UPDATED_FOOTER = { iconURL: CONFIG_VALUES.FALLBACK_AVATAR, text: "Last Updated" };
 
 /**
- * The bots-in-parentheses convention, in one place so the four call sites
- * cannot drift apart. Each field falls back on its own because /testnotify
- * passes a server that has no counts.
+ * Shared so call sites cannot drift. Each field falls back on its own because
+ * /testnotify passes a server that has no counts.
  * @param {object} [server] - One entry from the serverService snapshot
  * @returns {string} - e.g. "12 (2) / 24"
  */

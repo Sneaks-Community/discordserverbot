@@ -1,7 +1,6 @@
 /**
- * Where the server list lives: the one message the bot posted and keeps editing.
- * Held here rather than in the environment so an operator only ever configures a
- * channel, and so the message survives a restart instead of being re-posted.
+ * The one server list message the bot keeps editing, stored so it survives a
+ * restart instead of being re-posted and an operator only configures a channel.
  */
 
 import { discordIdSchema } from "../schemas/validationSchemas.js";
@@ -10,8 +9,7 @@ import { runStatement, validateOrThrow } from "./statements.js";
 /**
  * The channel is stored alongside the message so a changed EMBED_CHANNEL_ID is
  * a plain comparison rather than a failed fetch.
- * @returns {{ channelID: string, messageID: string }|null} - Null when the bot
- *   has not posted yet
+ * @returns {{ channelID: string, messageID: string }|null} - Null before the first post
  */
 export function getEmbedMessage() {
     const row = runStatement("SELECT channel_id, message_id FROM embed_message WHERE id = 1", [], "getEmbedMessage", "get");

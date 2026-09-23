@@ -6,11 +6,7 @@ import { getHelpEntries } from "./definitions.js";
 
 /** @typedef {import('discord.js').ChatInputCommandInteraction} Interaction */
 
-/**
- * Built from the same definitions Discord is registered with, so it cannot
- * drift. Admin commands are listed only for admins.
- * @param {Interaction} interaction
- */
+/** @param {Interaction} interaction */
 export async function handleSlashHelp(interaction) {
     // No footer: the command list is not a snapshot, so "Last Updated" misleads.
     const embed = createBaseEmbed("List of commands", { footer: null })

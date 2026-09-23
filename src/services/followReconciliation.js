@@ -1,7 +1,6 @@
 /**
- * Startup-only cleanup of the gap guildMemberRemove cannot cover: leaving while
- * the bot is offline emits no event. Every branch deletes real user data, so
- * anything short of a certain answer bails and logs.
+ * Startup-only prune of members who left while the bot was offline (no guildMemberRemove).
+ * Every branch deletes real user data, so anything short of certain bails and logs.
  */
 
 import { config } from "../config/index.js";

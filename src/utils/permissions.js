@@ -2,7 +2,7 @@ import { PermissionFlagsBits, PermissionsBitField } from "discord.js";
 
 /**
  * @param {import('discord.js').GuildChannel} channel
- * @param {bigint[]} [requiredPermissions] - Permission flags to check
+ * @param {bigint[]} [requiredPermissions]
  * @returns {{hasPermissions: boolean, missing: string[]}}
  */
 function checkChannelPermissions(channel, requiredPermissions = []) {
@@ -26,8 +26,7 @@ function checkChannelPermissions(channel, requiredPermissions = []) {
         return { hasPermissions: false, missing: ["Could not resolve permissions"] };
     }
 
-    // A missing flag is rendered back to its Discord name, so an operator reads
-    // the same wording the client shows.
+    // Rendered back to Discord's flag names, so operators read the client's wording.
     for (const perm of requiredPermissions) {
         if (!permissions.has(perm)) {
             missing.push(...new PermissionsBitField(perm).toArray());
@@ -41,8 +40,7 @@ function checkChannelPermissions(channel, requiredPermissions = []) {
 }
 
 /**
- * The { valid, error } shape the call sites report. Callers interpolate `error`
- * into their own remediation hint, so it is worded for an operator.
+ * Callers interpolate `error` into their own remediation hint, so it is worded for an operator.
  * @param {import('discord.js').GuildChannel} channel
  * @param {bigint[]} requiredPermissions
  * @returns {{valid: boolean, error?: string}}

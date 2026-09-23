@@ -7,9 +7,8 @@ import { discordIdSchema, mapNameSchema } from "../schemas/validationSchemas.js"
 import { runStatement, validateOrThrow } from "./statements.js";
 
 /**
- * Follow a map for a user
- * @param {string} discord_id - The Discord user ID
- * @param {string} map_name - The map name to follow
+ * @param {string} discord_id
+ * @param {string} map_name
  */
 export function followMap(discord_id, map_name) {
     const validatedDiscordId = validateOrThrow(discordIdSchema, discord_id, "followMap/discord_id");
@@ -19,9 +18,8 @@ export function followMap(discord_id, map_name) {
 }
 
 /**
- * Unfollow a map for a user
- * @param {string} discord_id - The Discord user ID
- * @param {string} map_name - The map name to unfollow
+ * @param {string} discord_id
+ * @param {string} map_name
  */
 export function unfollowMap(discord_id, map_name) {
     const validatedDiscordId = validateOrThrow(discordIdSchema, discord_id, "unfollowMap/discord_id");
@@ -39,8 +37,6 @@ export function getAllFollows() {
 }
 
 /**
- * Every user holding at least one follow. DISTINCT because the table is one row
- * per (user, map).
  * @returns {Array<string>} - Discord user IDs
  */
 export function getFollowerIds() {
@@ -68,8 +64,6 @@ export function countUserFollows(discord_id) {
 }
 
 /**
- * Selects a constant, not columns: only the row's existence matters, and
- * `.get()` yields undefined when there is none.
  * @param {string} discord_id
  * @param {string} map_name
  * @returns {boolean}
