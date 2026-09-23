@@ -140,7 +140,7 @@ export async function handleSlashListfollows(interaction) {
     if (!sanitizedUserId) return;
 
     const follows = getUserFollows(sanitizedUserId);
-  
+
     if (follows.length === 0) {
         return interaction.reply({ content: "You are not following any maps.", flags: MessageFlags.Ephemeral });
     }

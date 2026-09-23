@@ -13,19 +13,19 @@ function checkChannelPermissions(channel, requiredPermissions = []) {
     if (!channel.isTextBased?.()) {
         return { hasPermissions: false, missing: ["Channel is not text-based"] };
     }
-    
+
     const missing = [];
     const botMember = channel.guild?.members?.me;
-    
+
     if (!botMember) {
         return { hasPermissions: false, missing: ["Bot member not found in guild"] };
     }
-    
+
     const permissions = channel.permissionsFor(botMember);
     if (!permissions) {
         return { hasPermissions: false, missing: ["Could not resolve permissions"] };
     }
-    
+
     // A missing flag is rendered back to its Discord name, so an operator reads
     // the same wording the client shows.
     for (const perm of requiredPermissions) {
@@ -33,7 +33,7 @@ function checkChannelPermissions(channel, requiredPermissions = []) {
             missing.push(...new PermissionsBitField(perm).toArray());
         }
     }
-    
+
     return {
         hasPermissions: missing.length === 0,
         missing

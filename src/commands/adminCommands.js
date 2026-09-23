@@ -69,7 +69,7 @@ export async function handleSlashTestnotify(interaction) {
  */
 export async function handleSlashRemoveuser(interaction) {
     const userID = interaction.options.getString("userid");
-  
+
     if (!userID) {
         return interaction.reply({ content: "Please enter a valid user ID.", flags: MessageFlags.Ephemeral });
     }

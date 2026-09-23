@@ -51,7 +51,7 @@ export async function getCachedUser(userId, bot) {
 
 function cleanupUserCache() {
     if (userCache.size === 0) return;
-    
+
     const now = Date.now();
     let cleaned = 0;
     for (const [key, value] of userCache.entries()) {
@@ -60,14 +60,14 @@ function cleanupUserCache() {
             cleaned++;
         }
     }
-    
+
     // Still over the cap after the TTL pass: insertion order is recency order
     // (see getCachedUser), so the front of the map is what to drop.
     while (userCache.size >= MAX_USER_CACHE_SIZE) {
         userCache.delete(userCache.keys().next().value);
         cleaned++;
     }
-    
+
     if (cleaned > 0) {
         serviceLogger.info(`User cache cleanup: removed ${cleaned} entries, current size: ${userCache.size}`);
     }
@@ -86,13 +86,13 @@ export function checkRateLimit(userId, action, limit) {
     if (!userActionRateLimits.has(userId)) {
         userActionRateLimits.set(userId, {});
     }
-    
+
     const userActions = userActionRateLimits.get(userId);
-    
+
     if (!userActions[action]) {
         userActions[action] = [];
     }
-    
+
     userActions[action] = userActions[action].filter(timestamp => timestamp > oneMinuteAgo);
 
     if (userActions[action].length >= limit) {
@@ -100,17 +100,17 @@ export function checkRateLimit(userId, action, limit) {
         const retryAfter = Math.ceil((oldestAction + 60000 - now) / 1000);
         return { allowed: false, retryAfter };
     }
-    
+
     userActions[action].push(now);
     return { allowed: true, retryAfter: 0 };
 }
 
 function cleanupRateLimits() {
     if (userActionRateLimits.size === 0) return;
-    
+
     const now = Date.now();
     let cleaned = 0;
-    
+
     for (const [userId, actions] of userActionRateLimits.entries()) {
         let hasValidActions = false;
         for (const action of Object.keys(actions)) {
@@ -126,7 +126,7 @@ function cleanupRateLimits() {
             cleaned++;
         }
     }
-    
+
     // Still over the cap: evict the users whose oldest action is oldest. No
     // recency ordering here, unlike userCache, so this has to sort.
     if (userActionRateLimits.size >= MAX_RATE_LIMIT_MAP_SIZE) {
@@ -142,7 +142,7 @@ function cleanupRateLimits() {
                 userTimestamps.push({ oldestTs, userId });
             }
         }
-        
+
         userTimestamps.sort((a, b) => a.oldestTs - b.oldestTs);
         const toDelete = userTimestamps.slice(0, userActionRateLimits.size - MAX_RATE_LIMIT_MAP_SIZE + 100);
         for (const { userId } of toDelete) {
@@ -150,7 +150,7 @@ function cleanupRateLimits() {
             cleaned++;
         }
     }
-    
+
     if (cleaned > 0) {
         serviceLogger.info(`Rate limit cleanup: removed ${cleaned} users, current size: ${userActionRateLimits.size}`);
     }

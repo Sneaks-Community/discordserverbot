@@ -1,4 +1,5 @@
 import eslint from "@eslint/js";
+import stylistic from "@stylistic/eslint-plugin";
 import jsdocPlugin from "eslint-plugin-jsdoc";
 import nPlugin from "eslint-plugin-n";
 import unicornPlugin from "eslint-plugin-unicorn";
@@ -18,6 +19,7 @@ export default [
 
   {
     plugins: {
+      "@stylistic": stylistic,
       jsdoc: jsdocPlugin,
       n: nPlugin,
       unicorn: unicornPlugin,
@@ -39,10 +41,12 @@ export default [
     },
     rules: {
       // ── Style Rules ──────────────────────────────────────────────
-      indent: ["error", 4],
-      "linebreak-style": ["error", "unix"],
-      quotes: ["error", "double"],
-      semi: ["error", "always"],
+      "@stylistic/eol-last": "error",
+      "@stylistic/indent": ["error", 4],
+      "@stylistic/linebreak-style": ["error", "unix"],
+      "@stylistic/no-trailing-spaces": "error",
+      "@stylistic/quotes": ["error", "double"],
+      "@stylistic/semi": ["error", "always"],
 
       // ── Core Best Practices ──────────────────────────────────────
       "no-unused-vars": "error",
