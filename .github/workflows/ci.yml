@@ -50,6 +50,7 @@ jobs:
 
   docker-build:
     name: Docker Build
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
