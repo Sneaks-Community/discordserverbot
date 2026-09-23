@@ -254,16 +254,3 @@ embed at 25 fields.
 | `nick` | string | Yes | Display name shown in embeds (max 100 characters) |
 | `protocol` | string | No | Game protocol (default: `csgo`), from the [supported games list](https://github.com/gamedig/node-gamedig/blob/master/GAMES_LIST.md) |
 | `keywords` | array | Yes | Search keywords, at least one. Each must be lowercase, free of leading and trailing whitespace, at most 32 characters, and unique across all servers, since a lookup returns the first match |
-
-## Development
-
-```bash
-npm run lint      # eslint
-npm test          # node --test, everything under test/
-```
-
-The tests use Node's built-in runner, so there is nothing extra to install. They cover the pure
-helpers (output limits, pagination, map names, escaping) and the two inputs that decide whether the
-bot starts at all (the environment and `servers.json`), plus the follow operations against a real
-SQLite file in a temporary directory. `servers.json` must exist before running them, exactly as it
-must before running the bot.

@@ -1,8 +1,6 @@
 /**
- * parseEnv is the whole configuration contract, and the comment at the top of
- * envSchema.js lists the bugs that motivated it: MAX_CONCURRENT_QUERIES=0 stopping
- * every query, RETRY_MAX_RETRIES=0 making withRetry a no-op, a mistyped channel
- * ID silently disabling a feature. Each of those is a test below.
+ * parseEnv is the whole configuration contract: each variable's default, the
+ * values it accepts, and the message an operator sees for one it rejects.
  */
 
 import assert from "node:assert/strict";
@@ -93,13 +91,13 @@ describe("parseEnv, numbers", () => {
         ]);
     });
 
-    it("rejects the zero that used to stop every server query", () => {
+    it("rejects zero concurrent queries, which would stop every server query", () => {
         assert.deepEqual(parseEnv(env({ MAX_CONCURRENT_QUERIES: "0" })).errors, [
             "MAX_CONCURRENT_QUERIES: must be between 1 and 100"
         ]);
     });
 
-    it("rejects the zero that used to make withRetry a no-op", () => {
+    it("rejects zero retry attempts, since a retried operation needs at least one", () => {
         assert.deepEqual(parseEnv(env({ RETRY_MAX_RETRIES: "0" })).errors, [
             "RETRY_MAX_RETRIES: must be between 1 and 10"
         ]);
@@ -199,12 +197,5 @@ describe("parseEnv, URLs and presence", () => {
 describe("formatEnvIssue", () => {
     it("renders a top-level issue as VARIABLE: message", () => {
         assert.equal(formatEnvIssue({ message: "is required", path: ["DISCORD_TOKEN"] }), "DISCORD_TOKEN: is required");
-    });
-
-    it("renders an index and a property as an accessor chain", () => {
-        assert.equal(
-            formatEnvIssue({ message: "bad", path: ["SERVERS", 0, "channelID"] }),
-            "SERVERS[0].channelID: bad"
-        );
     });
 });

@@ -1,16 +1,18 @@
 /**
- * describeInterval writes the promise the embed makes to its readers ("updated
- * every 1.5 minutes"), so its rounding is user-visible text rather than a detail.
+ * The server list embed: its interval text is a promise to readers, and passing
+ * Discord's 6000-character total would 400 every edit.
  */
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
+import { embedLength } from "discord.js";
+
 process.env.DISCORD_GUILD_ID = "123456789012345678";
 process.env.DISCORD_TOKEN = "test-token";
 process.env.LOG_LEVEL = "silent";
 
-const { describeInterval } = await import("../src/embeds/serverEmbeds.js");
+const { describeInterval, makeEmbed } = await import("../src/embeds/serverEmbeds.js");
 
 describe("describeInterval", () => {
     it("reads sub-minute intervals in seconds", () => {
@@ -33,5 +35,20 @@ describe("describeInterval", () => {
 
     it("rounds to the nearest tenth of a minute", () => {
         assert.equal(describeInterval(100_000), "1.7 minutes");
+    });
+});
+
+describe("makeEmbed", () => {
+    it("keeps 25 servers with maximum-length fields within 6000 characters, skipping what does not fit", () => {
+        // Clamped to a 256-character name and a 1024-character value.
+        const huge = { fullIP: "1.2.3.4:27015", map: "m".repeat(2000), name: "n".repeat(300), online: true };
+        const servers = [...Array(24).fill(huge), { name: "Small", online: false }];
+
+        const embed = makeEmbed(Object.fromEntries(servers.map((server, i) => [`server${i}`, server]))).toJSON();
+
+        assert.ok(embedLength(embed) <= 6000, `${embedLength(embed)} characters`);
+        // Four maximum-length fields fit, and a later server that fits is still added.
+        assert.equal(embed.fields.length, 5);
+        assert.equal(embed.fields.at(-1).name, "Small");
     });
 });

@@ -258,6 +258,19 @@ export async function refresh() {
 }
 
 /**
+ * An offline or missing entry keeps lastSeen, so a server that comes back on
+ * another map still counts as a change.
+ * @param {string} lastSeen - The server's last seen map, "" if not yet seen
+ * @param {object} [live] - The server's entry in the latest snapshot
+ * @returns {{ changed: boolean, lastSeen: string }}
+ */
+export function detectMapChange(lastSeen, live) {
+    return live?.online
+        ? { changed: lastSeen !== "" && live.map !== lastSeen, lastSeen: live.map }
+        : { changed: false, lastSeen };
+}
+
+/**
  * Compares the latest snapshot against the last seen maps and notifies on change.
  * @param {Function} notifyCallback - Called as (newMap, serverInfo)
  * @returns {Promise<void>}
@@ -275,39 +288,27 @@ export async function updateServerData(notifyCallback) {
         const serverData = getServerData();
 
         for (const currentServer of serverObjectKeys) {
-            const currentServerObject = serverObject[currentServer];
+            const live = serverData[currentServer];
+            const { changed, lastSeen } = detectMapChange(oldData[currentServer], live);
 
-            if (!serverData[currentServer] || !serverData[currentServer].online) {
-                continue;
-            }
+            // Recorded before notifying, so a failed notification does not
+            // re-detect the same change on every later tick.
+            oldData[currentServer] = lastSeen;
 
-            const currentMap = serverData[currentServer].map;
-
-            if (oldData[currentServer] !== "" && oldData[currentServer] !== currentMap) {
-                const newMap = currentMap;
-                const live = serverData[currentServer];
-
-                // Recorded before notifying, so a failed notification does not
-                // re-detect the same change on every later tick.
-                oldData[currentServer] = newMap;
-
-                if (notifyCallback) {
-                    try {
-                        // A fresh object: live counts written onto serverObject
-                        // would pollute the servers.json /keywords and validation read.
-                        await notifyCallback(newMap, {
-                            ...currentServerObject,
-                            fullIP: live.fullIP,
-                            maxPlayers: live.maxPlayers,
-                            numBots: live.numBots,
-                            numPlayers: live.numPlayers
-                        });
-                    } catch (err) {
-                        serviceLogger.error({ err, map: newMap, server: currentServer }, "Map change notification failed");
-                    }
+            if (changed && notifyCallback) {
+                try {
+                    // A fresh object: live counts written onto serverObject
+                    // would pollute the servers.json /keywords and validation read.
+                    await notifyCallback(live.map, {
+                        ...serverObject[currentServer],
+                        fullIP: live.fullIP,
+                        maxPlayers: live.maxPlayers,
+                        numBots: live.numBots,
+                        numPlayers: live.numPlayers
+                    });
+                } catch (err) {
+                    serviceLogger.error({ err, map: live.map, server: currentServer }, "Map change notification failed");
                 }
-            } else if (oldData[currentServer] === "") {
-                oldData[currentServer] = currentMap;
             }
         }
     } finally {

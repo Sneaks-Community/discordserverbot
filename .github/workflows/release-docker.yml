@@ -31,9 +31,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Provide a server list
-        run: cp servers.json.example servers.json
-
       - name: Lint
         run: npm run lint
 

@@ -1,5 +1,5 @@
 /**
- * Renders a Zod issue path as an accessor chain, e.g. `[0].channelID`.
+ * Renders a Zod issue path as an accessor chain, e.g. `.keywords[0]`.
  * @param {ReadonlyArray<string|number|symbol>} path - Issue path after the first segment
  * @returns {string}
  */

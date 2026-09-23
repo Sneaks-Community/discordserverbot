@@ -6,7 +6,6 @@
 import { ActivityType } from "discord.js";
 import * as z from "zod";
 
-import { formatZodPathSuffix } from "../utils/zodValidator.js";
 import { discordIdSchema } from "./validationSchemas.js";
 
 /**
@@ -233,13 +232,12 @@ function collectOptionalFeatureWarnings(values) {
 }
 
 /**
+ * Every variable is a flat string, so the first path segment names the variable.
  * @param {import('zod').core.$ZodIssue} issue
- * @returns {string} - e.g. `SERVERS[0].nick: must contain only digits`
+ * @returns {string} - e.g. `SERVER_UPDATE_INTERVAL: must be a whole number`
  */
 export function formatEnvIssue(issue) {
-    const [name, ...rest] = issue.path;
-
-    return `${String(name)}${formatZodPathSuffix(rest)}: ${issue.message}`;
+    return `${String(issue.path[0])}: ${issue.message}`;
 }
 
 /**

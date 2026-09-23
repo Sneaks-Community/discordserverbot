@@ -36,11 +36,6 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      # servers.json is gitignored, and src/config/servers.js reads it from the
-      # project root, so the tests that validate the shipped file need it present.
-      - name: Provide a server list
-        run: cp servers.json.example servers.json
-
       - name: Run tests
         run: npm test
 

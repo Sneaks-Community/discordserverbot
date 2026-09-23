@@ -103,10 +103,12 @@ it("rejects a row the schema forbids", () => {
     );
 });
 
-it("is safe to initialize twice and keeps the existing data", () => {
+it("closes the previous connection when initialized again, and keeps the data", () => {
     followMap("100000000000000042", "de_dust2");
+    const previous = getStatement("SELECT 1");
     initDB();
 
+    assert.throws(() => previous.get(), /connection is not open/);
     assert.equal(countUserFollows("100000000000000042"), 1);
 });
 

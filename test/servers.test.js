@@ -6,6 +6,7 @@
  */
 
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
 import { validateServersConfig } from "../src/config/servers.js";
@@ -18,10 +19,10 @@ describe("validateServersConfig, errors", () => {
         assert.deepEqual(validateServersConfig({ Surf: VALID }), { errors: [], warnings: [] });
     });
 
-    it("accepts the file the repository actually ships with", () => {
-        // Locally this is the operator's own servers.json; in CI it is
-        // servers.json.example, copied in by the workflow.
-        assert.deepEqual(validateServersConfig().errors, []);
+    it("accepts the servers.json.example the repository ships", () => {
+        const example = JSON.parse(readFileSync(new URL("../servers.json.example", import.meta.url), "utf8"));
+
+        assert.deepEqual(validateServersConfig(example), { errors: [], warnings: [] });
     });
 
     it("names every missing field of an entry", () => {

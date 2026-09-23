@@ -19,8 +19,8 @@ const statementCache = new Map();
 export function initDB() {
     const dbPath = config.database.path;
     dbLogger.info(`Initializing database at: ${dbPath}`);
-    // Anything cached here belongs to a previous connection.
-    statementCache.clear();
+    // A repeat call must not leak the previous connection or its statements.
+    closeDB();
     db = new Database(dbPath);
     db.pragma("journal_mode = WAL");
     // Wait out a WAL checkpoint or open sqlite3 shell instead of throwing SQLITE_BUSY.
