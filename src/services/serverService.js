@@ -260,14 +260,14 @@ export async function refresh() {
 }
 
 /**
- * An offline or missing entry keeps lastSeen, so a server that comes back on
- * another map still counts as a change.
+ * An offline, missing or map-less entry keeps lastSeen, so a server that comes
+ * back on another map still counts as a change.
  * @param {string} lastSeen - The server's last seen map, "" if not yet seen
  * @param {object} [live] - The server's entry in the latest snapshot
  * @returns {{ changed: boolean, lastSeen: string }}
  */
 export function detectMapChange(lastSeen, live) {
-    return live?.online
+    return live?.online && live.map
         ? { changed: lastSeen !== "" && live.map !== lastSeen, lastSeen: live.map }
         : { changed: false, lastSeen };
 }

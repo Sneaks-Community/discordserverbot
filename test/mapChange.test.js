@@ -58,4 +58,8 @@ describe("detectMapChange", () => {
     it("stays quiet when a server returns on the same map", () => {
         assert.deepEqual(notifiedMaps([online("de_dust2"), OFFLINE, online("de_dust2")]), []);
     });
+
+    it("skips an empty map report, so the next map is compared with the one before it", () => {
+        assert.deepEqual(notifiedMaps([online("de_dust2"), online(""), online("de_inferno")]), ["de_inferno"]);
+    });
 });
