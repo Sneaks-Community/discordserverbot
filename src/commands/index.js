@@ -1,4 +1,4 @@
-import { REST, Routes, MessageFlags } from "discord.js";
+import { MessageFlags } from "discord.js";
 
 import { config } from "../config/index.js";
 import { commandLogger } from "../utils/logger.js";
@@ -10,23 +10,13 @@ const slashCommands = buildSlashCommands();
 /**
  * Throws without logging: only the caller knows whether a failure is fatal.
  * @param {import('discord.js').Client} bot
- * @throws {Error} If the application ID is unavailable or either REST call fails
+ * @throws {Error} If either registration call fails
  */
 export async function registerSlashCommands(bot) {
-    const rest = new REST({ version: "10" }).setToken(config.discordToken);
-
-    const applicationId = bot.application?.id || bot.user?.id;
-    if (!applicationId) {
-        throw new Error("Unable to get application ID - bot may not be fully initialized");
-    }
-
     // Separate from guild commands: stale global ones would show in every guild forever.
-    await rest.put(Routes.applicationCommands(applicationId), { body: [] });
+    await bot.application.commands.set([]);
 
-    await rest.put(
-        Routes.applicationGuildCommands(applicationId, config.discordGuildId),
-        { body: slashCommands }
-    );
+    await bot.application.commands.set(slashCommands, config.discordGuildId);
     commandLogger.info(`Successfully registered ${slashCommands.length} guild slash commands`);
 }
 

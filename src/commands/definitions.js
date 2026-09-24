@@ -42,7 +42,7 @@ export const COMMANDS_BY_NAME = new Map(COMMAND_DEFINITIONS.map(def => [def.name
 
 /**
  * @param {CommandDefinition} def
- * @returns {import('discord.js').RESTPostAPIChatInputApplicationCommandsJSONBody}
+ * @returns {import('discord.js').SlashCommandBuilder}
  */
 function buildCommand(def) {
     const builder = new SlashCommandBuilder()
@@ -57,11 +57,11 @@ function buildCommand(def) {
         builder.addStringOption(def.options);
     }
 
-    return builder.toJSON();
+    return builder;
 }
 
 /**
- * @returns {Array<import('discord.js').RESTPostAPIChatInputApplicationCommandsJSONBody>}
+ * @returns {Array<import('discord.js').SlashCommandBuilder>}
  */
 export function buildSlashCommands() {
     return COMMAND_DEFINITIONS.map(buildCommand);
@@ -72,7 +72,7 @@ export function buildSlashCommands() {
  * @returns {string} - e.g. `/players [server]`
  */
 function formatUsage(def) {
-    const options = buildCommand(def).options ?? [];
+    const { options } = buildCommand(def);
 
     return [`/${def.name}`, ...options.map(opt => (opt.required ? `<${opt.name}>` : `[${opt.name}]`))].join(" ");
 }
