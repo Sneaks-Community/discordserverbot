@@ -1,86 +1,23 @@
-import { PermissionFlagsBits, PermissionsBitField } from "discord.js";
+import { PermissionFlagsBits } from "discord.js";
+
+const { EmbedLinks, ReadMessageHistory, SendMessages, ViewChannel } = PermissionFlagsBits;
+
+export const SEND_PERMISSIONS = [ViewChannel, SendMessages, EmbedLinks];
+
+/** The server list channel also needs history, to fetch the message it edits. */
+export const STATUS_PERMISSIONS = [...SEND_PERMISSIONS, ReadMessageHistory];
 
 /**
- * @param {import('discord.js').GuildChannel} channel
- * @param {bigint[]} [requiredPermissions]
- * @returns {{hasPermissions: boolean, missing: string[]}}
+ * Worded for an operator, since callers put it in their remediation hint.
+ * @param {import('discord.js').Channel | null} channel
+ * @param {bigint[]} required
+ * @returns {string | null} - Null when the bot can post there
  */
-function checkChannelPermissions(channel, requiredPermissions = []) {
-    if (!channel) {
-        return { hasPermissions: false, missing: ["Channel not found"] };
-    }
+export function findChannelProblem(channel, required) {
+    if (!channel?.isTextBased() || channel.isDMBased()) return "Not a text channel in a guild";
 
-    if (!channel.isTextBased?.()) {
-        return { hasPermissions: false, missing: ["Channel is not text-based"] };
-    }
+    const missing = channel.permissionsFor(channel.guild.members.me)?.missing(required);
+    if (!missing) return "Could not resolve the bot's permissions";
 
-    const missing = [];
-    const botMember = channel.guild?.members?.me;
-
-    if (!botMember) {
-        return { hasPermissions: false, missing: ["Bot member not found in guild"] };
-    }
-
-    const permissions = channel.permissionsFor(botMember);
-    if (!permissions) {
-        return { hasPermissions: false, missing: ["Could not resolve permissions"] };
-    }
-
-    // Rendered back to Discord's flag names, so operators read the client's wording.
-    for (const perm of requiredPermissions) {
-        if (!permissions.has(perm)) {
-            missing.push(...new PermissionsBitField(perm).toArray());
-        }
-    }
-
-    return {
-        hasPermissions: missing.length === 0,
-        missing
-    };
-}
-
-/**
- * Callers interpolate `error` into their own remediation hint, so it is worded for an operator.
- * @param {import('discord.js').GuildChannel} channel
- * @param {bigint[]} requiredPermissions
- * @returns {{valid: boolean, error?: string}}
- */
-function validateChannel(channel, requiredPermissions) {
-    const result = checkChannelPermissions(channel, requiredPermissions);
-
-    if (!result.hasPermissions) {
-        return {
-            error: `Missing permissions: ${result.missing.join(", ")}`,
-            valid: false
-        };
-    }
-
-    return { valid: true };
-}
-
-/**
- * @param {import('discord.js').GuildChannel} channel
- * @returns {{valid: boolean, error?: string}}
- */
-export function validateChannelForSend(channel) {
-    return validateChannel(channel, [
-        PermissionFlagsBits.ViewChannel,
-        PermissionFlagsBits.SendMessages,
-        PermissionFlagsBits.EmbedLinks
-    ]);
-}
-
-/**
- * The server list channel, which needs both halves: the bot posts its message
- * once and re-fetches it to edit on every tick after that.
- * @param {import('discord.js').GuildChannel} channel
- * @returns {{valid: boolean, error?: string}}
- */
-export function validateChannelForStatus(channel) {
-    return validateChannel(channel, [
-        PermissionFlagsBits.ViewChannel,
-        PermissionFlagsBits.SendMessages,
-        PermissionFlagsBits.ReadMessageHistory,
-        PermissionFlagsBits.EmbedLinks
-    ]);
+    return missing.length > 0 ? `Missing permissions: ${missing.join(", ")}` : null;
 }

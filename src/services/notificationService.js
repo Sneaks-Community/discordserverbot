@@ -8,7 +8,7 @@ import { mapNameSchema } from "../schemas/validationSchemas.js";
 import { getTerminalReason, isRecipientRefusal, isRetryableDiscordError, TerminalError } from "../utils/discordErrors.js";
 import { serviceLogger } from "../utils/logger.js";
 import { getMapImage } from "../utils/mapUtils.js";
-import { validateChannelForSend } from "../utils/permissions.js";
+import { findChannelProblem, SEND_PERMISSIONS } from "../utils/permissions.js";
 import { withRetry } from "../utils/retry.js";
 import { validateWithZod } from "../utils/zodValidator.js";
 import { checkRateLimit, isDmRefused, markDmRefused } from "./cacheService.js";
@@ -42,10 +42,9 @@ export function initNotificationService(bot) {
 /**
  * @param {string} mapName - As normalized by getInfo
  * @param {object} serverObj
- * @param {import('discord.js').Client} [bot] - Defaults to the initNotificationService client
  * @returns {Promise<void>}
  */
-export async function notifyUsers(mapName, serverObj, bot = botInstance) {
+export async function notifyUsers(mapName, serverObj) {
     const server = serverObj?.nick ?? "unknown server";
 
     // gamedig's connect address when there is one: the configured ip may omit the
@@ -84,7 +83,7 @@ export async function notifyUsers(mapName, serverObj, bot = botInstance) {
     // The validated lowercase name, the form follows are stored under.
     const mapImage = getMapImage(validatedMap.data);
 
-    const event = { bot, ip, mapImage, mapName, server, serverObj, validatedMapName: validatedMap.data };
+    const event = { ip, mapImage, mapName, server, serverObj, validatedMapName: validatedMap.data };
 
     // This is about our own wall clock, not about protecting Discord: discord.js's
     // REST queue already enforces the global rate limit and sleeps on a 429.
@@ -183,7 +182,7 @@ function buildNotificationContent({ ip, mapName, server }) {
  * @returns {Promise<string>} - One of the DELIVERY values
  */
 async function deliverNotification(user, event) {
-    const { bot, mapName, server, validatedMapName } = event;
+    const { mapName, server, validatedMapName } = event;
 
     try {
         // Keyed per map, so a user following three maps that rotate together
@@ -213,7 +212,7 @@ async function deliverNotification(user, event) {
             return DELIVERY.suppressed;
         }
 
-        await bot.users.send(user.discord_id, {
+        await botInstance.users.send(user.discord_id, {
             content: buildNotificationContent(event),
             embeds: [buildMapNotificationEmbed(event)]
         });
@@ -279,19 +278,11 @@ async function resolveFallbackChannel(bot) {
  * @returns {Promise<void>}
  */
 async function sendFallbackNotification(event, undeliverable) {
-    // The client threaded through from notifyUsers, not module-level botInstance,
-    // so an explicitly passed client is honoured.
-    const { bot, mapName } = event;
+    const { mapName } = event;
 
     // Without this, an unconfigured fallback costs three retried throws with backoff.
     if (!config.fallbackChannelId) {
         serviceLogger.debug({ map: mapName, undeliverable: undeliverable.total }, "No fallback channel configured, skipping fallback notification");
-        return;
-    }
-
-    // No init and no client passed. Without this, withRetry burns three TypeErrors.
-    if (!bot) {
-        serviceLogger.error({ map: mapName }, "No Discord client available, skipping fallback notification");
         return;
     }
 
@@ -300,13 +291,13 @@ async function sendFallbackNotification(event, undeliverable) {
 
     try {
         await withRetry(async () => {
-            const channel = await resolveFallbackChannel(bot);
+            const channel = await resolveFallbackChannel(botInstance);
             // Terminal: another attempt cannot grant a missing permission.
-            const permCheck = validateChannelForSend(channel);
-            if (!permCheck.valid) {
+            const problem = findChannelProblem(channel, SEND_PERMISSIONS);
+            if (problem) {
                 throw new TerminalError(
-                    `Fallback channel permission error: ${permCheck.error}`,
-                    `${permCheck.error} in the fallback channel ${config.fallbackChannelId}; grant the bot those permissions there`
+                    `Fallback channel permission error: ${problem}`,
+                    `${problem} in the fallback channel ${config.fallbackChannelId}; grant the bot those permissions there`
                 );
             }
             await channel.send({

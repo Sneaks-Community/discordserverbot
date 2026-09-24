@@ -25,7 +25,6 @@ export async function handleSlashListallfollows(interaction) {
     const lines = follows.map((follow) => `<@${follow.discord_id}>: ${follow.map_name}`);
 
     await replyWithPagedEmbed(interaction, {
-        ephemeral: true,
         lines,
         title: `List of all followed maps (${follows.length}):`
     });

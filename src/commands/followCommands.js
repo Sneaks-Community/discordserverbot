@@ -2,7 +2,7 @@ import { MessageFlags } from "discord.js";
 
 import { config } from "../config/index.js";
 import { followMap, unfollowMap, countUserFollows, getUserFollows, isFollowingMap, unfollowAll } from "../db/index.js";
-import { discordIdSchema, mapNameSchema } from "../schemas/validationSchemas.js";
+import { mapNameSchema } from "../schemas/validationSchemas.js";
 import { checkRateLimit } from "../services/cacheService.js";
 import { escapeForDiscord } from "../utils/discordEscape.js";
 import { commandLogger } from "../utils/logger.js";
@@ -11,19 +11,6 @@ import { validateWithZod } from "../utils/zodValidator.js";
 
 /** @typedef {import('discord.js').ChatInputCommandInteraction} Interaction */
 /** @typedef {import('discord.js').InteractionResponse} Reply */
-
-/**
- * Replies itself if the invoker's ID is invalid, so callers only check for null.
- * @param {Interaction} interaction
- * @returns {Promise<?string>} - The validated ID, or null if already replied to
- */
-async function resolveUserId(interaction) {
-    const result = validateWithZod(discordIdSchema, interaction.user.id, "User ID");
-    if (result.valid) return result.data;
-
-    await interaction.reply({ content: result.error, flags: MessageFlags.Ephemeral });
-    return null;
-}
 
 /**
  * Replies itself when the user is over the limit.
@@ -50,14 +37,13 @@ async function enforceRateLimit(interaction, { action, gerund, limit, userId }) 
 export async function handleSlashFollow(interaction) {
     const rawMap = interaction.options.getString("map");
 
-    const sanitizedUserId = await resolveUserId(interaction);
-    if (!sanitizedUserId) return;
+    const userId = interaction.user.id;
 
     const withinLimit = await enforceRateLimit(interaction, {
         action: "follow",
         gerund: "following",
         limit: config.rateLimitFollowPerMinute,
-        userId: sanitizedUserId
+        userId
     });
     if (!withinLimit) return;
 
@@ -68,12 +54,12 @@ export async function handleSlashFollow(interaction) {
     }
     const sanitizedMap = mapValidation.data;
 
-    if (isFollowingMap(sanitizedUserId, sanitizedMap)) {
+    if (isFollowingMap(userId, sanitizedMap)) {
         return interaction.reply({ content: "You are already following this map.", flags: MessageFlags.Ephemeral });
     }
 
     // Checked after the duplicate test so re-following a listed map is never refused.
-    const followCount = countUserFollows(sanitizedUserId);
+    const followCount = countUserFollows(userId);
     if (followCount >= config.maxFollowsPerUser) {
         return interaction.reply({
             content: `You are already following the maximum of ${config.maxFollowsPerUser} maps. Use \`/unfollow <map>\` to make room, or \`/unfollow all\` to start over.`,
@@ -81,11 +67,11 @@ export async function handleSlashFollow(interaction) {
         });
     }
 
-    followMap(sanitizedUserId, sanitizedMap);
+    followMap(userId, sanitizedMap);
 
     await interaction.reply({ content: `You are now following ${sanitizedMap}. You will be notified when the map comes on a server.`, flags: MessageFlags.Ephemeral });
 
-    commandLogger.info({ map: sanitizedMap, userId: sanitizedUserId, username: interaction.user.tag }, "User followed map");
+    commandLogger.info({ map: sanitizedMap, userId, username: interaction.user.tag }, "User followed map");
 }
 
 /**
@@ -95,21 +81,20 @@ export async function handleSlashFollow(interaction) {
 export async function handleSlashUnfollow(interaction) {
     const rawMap = interaction.options.getString("map");
 
-    const sanitizedUserId = await resolveUserId(interaction);
-    if (!sanitizedUserId) return;
+    const userId = interaction.user.id;
 
     const withinLimit = await enforceRateLimit(interaction, {
         action: "unfollow",
         gerund: "unfollowing",
         limit: config.rateLimitUnfollowPerMinute,
-        userId: sanitizedUserId
+        userId
     });
     if (!withinLimit) return;
 
     if (rawMap.trim().toLowerCase() === "all") {
-        unfollowAll(sanitizedUserId);
+        unfollowAll(userId);
         await interaction.reply({ content: "You are no longer following any maps.", flags: MessageFlags.Ephemeral });
-        commandLogger.info({ userId: sanitizedUserId, username: interaction.user.tag }, "User unfollowed all maps");
+        commandLogger.info({ userId, username: interaction.user.tag }, "User unfollowed all maps");
     } else {
         const mapValidation = validateWithZod(mapNameSchema, rawMap, "Map name");
         if (!mapValidation.valid) {
@@ -117,13 +102,13 @@ export async function handleSlashUnfollow(interaction) {
         }
         const sanitizedMap = mapValidation.data;
 
-        if (!isFollowingMap(sanitizedUserId, sanitizedMap)) {
+        if (!isFollowingMap(userId, sanitizedMap)) {
             return interaction.reply({ content: "You are not following this map. Use `/listfollows` to see a list of maps you are following.", flags: MessageFlags.Ephemeral });
         }
 
-        unfollowMap(sanitizedUserId, sanitizedMap);
+        unfollowMap(userId, sanitizedMap);
         await interaction.reply({ content: `You are no longer following ${sanitizedMap}.`, flags: MessageFlags.Ephemeral });
-        commandLogger.info({ map: sanitizedMap, userId: sanitizedUserId, username: interaction.user.tag }, "User unfollowed map");
+        commandLogger.info({ map: sanitizedMap, userId, username: interaction.user.tag }, "User unfollowed map");
     }
 }
 
@@ -132,10 +117,9 @@ export async function handleSlashUnfollow(interaction) {
  * @returns {Promise<void|Reply>} - Early returns carry the reply; no caller reads it
  */
 export async function handleSlashListfollows(interaction) {
-    const sanitizedUserId = await resolveUserId(interaction);
-    if (!sanitizedUserId) return;
+    const userId = interaction.user.id;
 
-    const follows = getUserFollows(sanitizedUserId);
+    const follows = getUserFollows(userId);
 
     if (follows.length === 0) {
         return interaction.reply({ content: "You are not following any maps.", flags: MessageFlags.Ephemeral });
@@ -145,7 +129,6 @@ export async function handleSlashListfollows(interaction) {
     const lines = follows.map((follow) => escapeForDiscord(follow.map_name));
 
     await replyWithPagedEmbed(interaction, {
-        ephemeral: true,
         lines,
         title: `List of maps you are following (${follows.length}):`
     });

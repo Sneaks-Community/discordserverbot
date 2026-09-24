@@ -21,7 +21,7 @@ process.env.FALLBACK_CHANNEL_ID = FALLBACK_CHANNEL_ID;
 process.env.LOG_LEVEL = "silent";
 process.env.MAX_NOTIFICATION_RECIPIENTS = "1";
 
-const { notifyUsers } = await import("../src/services/notificationService.js");
+const { initNotificationService, notifyUsers } = await import("../src/services/notificationService.js");
 const { closeDB, followMap, initDB } = await import("../src/db/index.js");
 
 /**
@@ -33,8 +33,9 @@ function fakeBot() {
     const channel = {
         guild: { members: { me: {} } },
         guildId: GUILD_ID,
+        isDMBased: () => false,
         isTextBased: () => true,
-        permissionsFor: () => ({ has: () => true }),
+        permissionsFor: () => ({ missing: () => [] }),
         send: (payload) => {
             posts.push(payload);
             return Promise.resolve();
@@ -64,8 +65,9 @@ describe("notifyUsers", () => {
 
     it("counts followers left out by the recipient cap in the fallback post", async () => {
         const { bot, posts } = fakeBot();
+        initNotificationService(bot);
 
-        await notifyUsers("de_dust2", { ip: "1.2.3.4:27015", nick: "Surf" }, bot);
+        await notifyUsers("de_dust2", { ip: "1.2.3.4:27015", nick: "Surf" });
 
         assert.equal(posts.length, 1);
         assert.match(posts[0].content, /1 follower could not be DMed: 1 over the recipient cap/);

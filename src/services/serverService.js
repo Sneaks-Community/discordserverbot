@@ -288,7 +288,7 @@ export async function updateServerData(notifyCallback) {
             // re-detect the same change on every later tick.
             oldData[currentServer] = lastSeen;
 
-            if (changed && notifyCallback) {
+            if (changed) {
                 try {
                     // A fresh object: live counts written onto serverObject
                     // would pollute the servers.json /keywords and validation read.

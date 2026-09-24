@@ -10,16 +10,6 @@ import { describe, it } from "node:test";
 
 import { clampText, EMBED_DESCRIPTION_LIMIT, EMBED_FIELD_NAME_LIMIT, EMBED_FIELD_VALUE_LIMIT, EMBED_TITLE_LIMIT, EMBED_TOTAL_LIMIT, joinWithinLimit, MESSAGE_CONTENT_LIMIT } from "../src/utils/truncate.js";
 
-/**
- * A shorter overflow notice than the default one, to show the caller's suffix is
- * both used and accounted for in the budget.
- * @param {number} remaining - Number of lines that did not fit
- * @returns {string} - The notice
- */
-function shortSuffix(remaining) {
-    return ` [+${remaining}]`;
-}
-
 describe("joinWithinLimit", () => {
     it("joins with newlines when everything fits", () => {
         assert.equal(joinWithinLimit(["one", "two", "three"], 100), "one\ntwo\nthree");
@@ -60,21 +50,6 @@ describe("joinWithinLimit", () => {
 
         assert.equal(result.length, 100);
         assert.ok(result.endsWith("…"));
-    });
-
-    it("honors a custom separator and its cost", () => {
-        assert.equal(joinWithinLimit(["a", "b"], 100, { separator: ", " }), "a, b");
-
-        // "aaaa, bbbb" is 10 characters, so a limit of 9 has to drop one line.
-        const tight = joinWithinLimit(["aaaa", "bbbb"], 9, { separator: ", " });
-        assert.ok(tight.length <= 9);
-    });
-
-    it("uses a custom suffix and still respects the limit", () => {
-        const result = joinWithinLimit(["aaaaa", "bbbbb", "ccccc"], 12, { suffix: shortSuffix });
-
-        assert.ok(result.length <= 12);
-        assert.ok(result.includes("[+"));
     });
 
     it("never exceeds the limit, whatever the limit is", () => {

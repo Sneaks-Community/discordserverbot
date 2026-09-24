@@ -11,7 +11,7 @@ import { notifyUsers, initNotificationService } from "./services/notificationSer
 import { refresh, getServerData, updateServerData } from "./services/serverService.js";
 import { getTerminalReason, TerminalError } from "./utils/discordErrors.js";
 import { botLogger, flushLogs } from "./utils/logger.js";
-import { validateChannelForStatus } from "./utils/permissions.js";
+import { findChannelProblem, STATUS_PERMISSIONS } from "./utils/permissions.js";
 
 let embedInterval = null;
 
@@ -201,11 +201,11 @@ async function publishEmbed(embed) {
         const channel = await bot.channels.fetch(channelId);
 
         // Terminal, so the log names the fix rather than a bare failure.
-        const permCheck = validateChannelForStatus(channel);
-        if (!permCheck.valid) {
+        const problem = findChannelProblem(channel, STATUS_PERMISSIONS);
+        if (problem) {
             throw new TerminalError(
-                `Permission check failed for channel ${channelId}: ${permCheck.error}`,
-                `${permCheck.error} in channel ${channelId}; grant the bot those permissions there`
+                `Permission check failed for channel ${channelId}: ${problem}`,
+                `${problem} in channel ${channelId}; grant the bot those permissions there`
             );
         }
 

@@ -57,22 +57,19 @@ export function paginateLines(lines, { limit = EMBED_DESCRIPTION_LIMIT, maxLines
 }
 
 /**
- * A single page is a plain embed; only a real overflow adds buttons.
+ * Always ephemeral. A single page is a plain embed; only a real overflow adds buttons.
  * @param {import('discord.js').ChatInputCommandInteraction} interaction
  * @param {object} options
- * @param {boolean} [options.ephemeral]
  * @param {string[]} options.lines
  * @param {string} options.title
  * @returns {Promise<void>}
  */
-export async function replyWithPagedEmbed(interaction, { ephemeral = false, lines, title }) {
+export async function replyWithPagedEmbed(interaction, { lines, title }) {
     // An embed description may not be empty, so an empty listing needs a body.
     const pages = paginateLines(lines);
     if (pages.length === 0) {
         pages.push("*Nothing to show.*");
     }
-
-    const flags = ephemeral ? MessageFlags.Ephemeral : 0;
 
     const buildEmbed = (index) => {
         // The footer is the page counter here, so the shared one is left off.
@@ -86,7 +83,7 @@ export async function replyWithPagedEmbed(interaction, { ephemeral = false, line
     };
 
     if (pages.length <= 1) {
-        await interaction.reply({ embeds: [buildEmbed(0)], flags });
+        await interaction.reply({ embeds: [buildEmbed(0)], flags: MessageFlags.Ephemeral });
         return;
     }
 
@@ -109,7 +106,7 @@ export async function replyWithPagedEmbed(interaction, { ephemeral = false, line
     );
 
     let page = 0;
-    const response = await interaction.reply({ components: [buildRow(page)], embeds: [buildEmbed(page)], flags });
+    const response = await interaction.reply({ components: [buildRow(page)], embeds: [buildEmbed(page)], flags: MessageFlags.Ephemeral });
 
     // Collecting on the response matches the interaction's own id, so this works
     // for ephemeral replies, where there is no cached message.
@@ -121,12 +118,6 @@ export async function replyWithPagedEmbed(interaction, { ephemeral = false, line
 
     collector.on("collect", async (button) => {
         try {
-            // Public listings are visible to everyone, but only the invoker drives them.
-            if (button.user.id !== interaction.user.id) {
-                await button.reply({ content: "Run the command yourself to page through the results.", flags: MessageFlags.Ephemeral });
-                return;
-            }
-
             page = button.customId === NEXT_ID
                 ? Math.min(page + 1, pages.length - 1)
                 : Math.max(page - 1, 0);

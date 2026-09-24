@@ -32,11 +32,10 @@ export function clampText(value, limit) {
 }
 
 /**
- * Default overflow notice appended when lines had to be dropped.
  * @param {number} remaining - Number of lines that did not fit
  * @returns {string} The notice, including its leading newline
  */
-function defaultSuffix(remaining) {
+function overflowNotice(remaining) {
     return `\n...and ${remaining} more`;
 }
 
@@ -45,28 +44,25 @@ function defaultSuffix(remaining) {
  * The worst-case notice length is reserved up front so the notice can never push the result over.
  * @param {string[]} lines
  * @param {number} limit
- * @param {object} [options]
- * @param {string} [options.separator] - Separator between lines, default newline
- * @param {Function} [options.suffix] - Builds the overflow notice from a remaining count
  * @returns {string} Never longer than `limit`
  */
-export function joinWithinLimit(lines, limit, { separator = "\n", suffix = defaultSuffix } = {}) {
+export function joinWithinLimit(lines, limit) {
     const items = lines.filter((line) => typeof line === "string" && line.length > 0);
     if (items.length === 0) {
         return "";
     }
 
-    const joined = items.join(separator);
+    const joined = items.join("\n");
     if (joined.length <= limit) {
         return joined;
     }
 
-    const budget = limit - suffix(items.length).length;
+    const budget = limit - overflowNotice(items.length).length;
 
     const kept = [];
     let used = 0;
     for (const item of items) {
-        const cost = kept.length === 0 ? item.length : item.length + separator.length;
+        const cost = kept.length === 0 ? item.length : item.length + 1;
         if (used + cost > budget) {
             break;
         }
@@ -75,12 +71,12 @@ export function joinWithinLimit(lines, limit, { separator = "\n", suffix = defau
     }
 
     // Not even the first line fits, so hard-truncate it rather than return empty. The final
-    // slice keeps the result within the limit whatever the caller's suffix does.
+    // slice covers a limit shorter than the notice itself.
     if (kept.length === 0) {
-        const notice = items.length > 1 ? suffix(items.length - 1) : "";
+        const notice = items.length > 1 ? overflowNotice(items.length - 1) : "";
         const head = items[0].slice(0, Math.max(0, limit - notice.length - 1));
         return (head + "…" + notice).slice(0, limit);
     }
 
-    return (kept.join(separator) + suffix(items.length - kept.length)).slice(0, limit);
+    return kept.join("\n") + overflowNotice(items.length - kept.length);
 }
