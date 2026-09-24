@@ -187,8 +187,6 @@ export const envSchema = z.object({
     // HEALTHCHECK probes, so Docker works with nothing set anywhere.
     HEALTH_PORT: intEnv(3000, 0, 65535),
     MAP_IMAGE_BASE_URL: mapImageBaseUrlEnv,
-    // p-limit throws on a concurrency below 1
-    MAX_CONCURRENT_QUERIES: intEnv(10, 1, 100),
     // Lifetime cap per user; the per-minute rate limit only paces accumulation.
     MAX_FOLLOWS_PER_USER: intEnv(50, 1, 10000),
     // Per map change: Discord quarantines bots for bulk DMs, even opt-in ones.

@@ -25,7 +25,6 @@ describe("parseEnv, defaults", () => {
 
         assert.deepEqual(errors, []);
         assert.equal(values.SERVER_UPDATE_INTERVAL, 90);
-        assert.equal(values.MAX_CONCURRENT_QUERIES, 10);
         assert.equal(values.EMBED_COLOR, 7980240);
         assert.equal(values.DATABASE_PATH, "db.sqlite");
         assert.equal(values.BOT_ACTIVITY_TYPE, "custom");
@@ -91,12 +90,6 @@ describe("parseEnv, numbers", () => {
         ]);
     });
 
-    it("rejects zero concurrent queries, which would stop every server query", () => {
-        assert.deepEqual(parseEnv(env({ MAX_CONCURRENT_QUERIES: "0" })).errors, [
-            "MAX_CONCURRENT_QUERIES: must be between 1 and 100"
-        ]);
-    });
-
     it("rejects zero retry attempts, since a retried operation needs at least one", () => {
         assert.deepEqual(parseEnv(env({ RETRY_MAX_RETRIES: "0" })).errors, [
             "RETRY_MAX_RETRIES: must be between 1 and 10"
@@ -110,7 +103,7 @@ describe("parseEnv, numbers", () => {
     });
 
     it("collects every bad number rather than stopping at the first", () => {
-        const { errors } = parseEnv(env({ GAMEDIG_MAX_RETRIES: "11", MAX_CONCURRENT_QUERIES: "x", MAX_FOLLOWS_PER_USER: "-1" }));
+        const { errors } = parseEnv(env({ GAMEDIG_MAX_RETRIES: "11", HEALTH_PORT: "x", MAX_FOLLOWS_PER_USER: "-1" }));
 
         assert.equal(errors.length, 3);
     });

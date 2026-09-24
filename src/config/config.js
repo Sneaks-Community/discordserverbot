@@ -34,7 +34,6 @@ export const config = {
     healthHost: env.HEALTH_HOST,
     healthPort: env.HEALTH_PORT,
     mapImageBaseUrl: env.MAP_IMAGE_BASE_URL,
-    maxConcurrentQueries: env.MAX_CONCURRENT_QUERIES,
     maxFollowsPerUser: env.MAX_FOLLOWS_PER_USER,
     maxNotificationRecipients: env.MAX_NOTIFICATION_RECIPIENTS,
     offlineServerImage: env.OFFLINE_SERVER_IMAGE,

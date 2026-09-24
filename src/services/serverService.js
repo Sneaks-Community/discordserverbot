@@ -1,5 +1,4 @@
 import { GameDig } from "gamedig";
-import pLimit from "p-limit";
 
 import { config, serverObject } from "../config/index.js";
 import { DEFAULT_SERVER_PORT, playerNameSchema } from "../schemas/validationSchemas.js";
@@ -166,8 +165,8 @@ export async function getInfo(server, index, wasOffline = false) {
 }
 
 /**
- * The only bound on the whole pass; gamedig timeouts bound one attempt each and
- * the concurrency limit only batches. Giving up returns the offline shape.
+ * The only bound on the whole pass, since gamedig timeouts bound one attempt each.
+ * Giving up returns the offline shape.
  * @param {string} name - Server key in serverObject, for logging
  * @param {object} server - The servers.json entry
  * @param {number} index - Its 1-based position in the list
@@ -176,11 +175,6 @@ export async function getInfo(server, index, wasOffline = false) {
  */
 async function getInfoWithinDeadline(name, server, index, deadline) {
     const remainingMs = deadline - Date.now();
-
-    if (remainingMs <= 0) {
-        serviceLogger.warn({ server: name }, "Refresh ran out of time before this server was queried; reporting it offline");
-        return buildOfflineServerData(server, index);
-    }
 
     let timer;
     const ranOut = new Promise((resolve) => {
@@ -200,7 +194,7 @@ async function getInfoWithinDeadline(name, server, index, deadline) {
 }
 
 /**
- * Queries every server, concurrency-limited, and swaps in the new snapshot.
+ * Queries every server concurrently and swaps in the new snapshot.
  * @returns {Promise<boolean>} - False when a pass was already in flight, so the
  *   snapshot is untouched and there is nothing new to publish
  */
@@ -217,20 +211,16 @@ export async function refresh() {
         const serverEntries = Object.entries(serverObject);
         const deadline = startedAt + Math.round(config.serverUpdateIntervalMs * REFRESH_BUDGET_FRACTION);
 
-        const limit = pLimit(config.maxConcurrentQueries);
-
         const results = await Promise.all(
-            serverEntries.map(([name, server], index) =>
-                limit(async () => {
-                    try {
-                        const data = await getInfoWithinDeadline(name, server, index + 1, deadline);
-                        return [name, data];
-                    } catch (err) {
-                        serviceLogger.error({ err, server: name }, "Failed to query server");
-                        return [name, buildOfflineServerData(server, index + 1)];
-                    }
-                })
-            )
+            serverEntries.map(async ([name, server], index) => {
+                try {
+                    const data = await getInfoWithinDeadline(name, server, index + 1, deadline);
+                    return [name, data];
+                } catch (err) {
+                    serviceLogger.error({ err, server: name }, "Failed to query server");
+                    return [name, buildOfflineServerData(server, index + 1)];
+                }
+            })
         );
 
         _serverData = Object.fromEntries(results);

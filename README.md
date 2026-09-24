@@ -208,7 +208,6 @@ value, except where the table says empty disables something.
 | `EMBED_COLOR` | No | `#79C4D0` | Six hex digits, `#` optional | Embed color as a hex color |
 | `DATABASE_PATH` | No | `db.sqlite` | non-empty | SQLite file path. In Docker it must stay on the mounted volume (`/app/data/db.sqlite`, the image default) |
 | `SERVER_UPDATE_INTERVAL` | No | `90` | 30 to 86400 | How often the bot queries the servers, updates the embeds and checks for map changes, in that order, on one timer (seconds). The embed states this interval in its description |
-| `MAX_CONCURRENT_QUERIES` | No | `10` | 1 to 100 | Maximum concurrent server queries |
 | `RETRY_MAX_RETRIES` | No | `3` | 1 to 10 | Attempts for a retried Discord operation. At least 1, since 0 would mean never attempting it |
 | `RETRY_BASE_DELAY` | No | `1` | 0 to 60 | Base delay for exponential backoff (seconds) |
 | `GAMEDIG_MAX_RETRIES` | No | `4` | 0 to 10 | Maximum retries for GameDig queries. A multiplier over the ports GameDig tries, so raising it multiplies what an unreachable server costs. A refresh pass is capped at 80% of `SERVER_UPDATE_INTERVAL` regardless, and servers not reached by then are reported offline for that tick |
