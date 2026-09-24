@@ -5,7 +5,7 @@
 
 import { readFileSync } from "node:fs";
 
-import { serversFileSchema } from "../schemas/validationSchemas.js";
+import { serverEntrySchema, serversFileSchema } from "../schemas/validationSchemas.js";
 import { formatZodPathSuffix } from "../utils/zodValidator.js";
 
 /** Beside the sources rather than inside them; both Docker paths bind-mount it here. */
@@ -34,9 +34,6 @@ function readServers() {
     }
 }
 
-/** Unknown fields only warn, so a stale or misspelled one never blocks startup. */
-const KNOWN_SERVER_FIELDS = new Set(["ip", "keywords", "nick", "protocol"]);
-
 /**
  * Prefixes an issue with its location, e.g. `servers.json: "Beginner_Surf"...`.
  * File-level issues (empty path) already name the file, so they pass through.
@@ -63,7 +60,7 @@ function collectWarnings(servers) {
     for (const [name, server] of Object.entries(servers)) {
         if (!server || typeof server !== "object") continue;
 
-        const unknownFields = Object.keys(server).filter((field) => !KNOWN_SERVER_FIELDS.has(field));
+        const unknownFields = Object.keys(server).filter((field) => !Object.hasOwn(serverEntrySchema.shape, field));
         if (unknownFields.length > 0) {
             warnings.push(`servers.json: "${name}" has unrecognized field(s) ${unknownFields.map((field) => `"${field}"`).join(", ")} which are ignored`);
         }

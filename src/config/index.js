@@ -1,14 +1,24 @@
 import { configLogger } from "../utils/logger.js";
 import { config, ENV_ERRORS, ENV_WARNINGS } from "./config.js";
-import { ConfigError } from "./configError.js";
 import { serverObject, validateServersConfig } from "./servers.js";
 
-export { config, ConfigError, serverObject };
+export { config, serverObject };
+
+/** Raised by validateConfig instead of exiting, so src/index.js stays the single exit point. */
+export class ConfigError extends Error {
+    /**
+     * @param {string} message
+     * @param {string[]} [errors] - Every individual failure, in declaration order
+     */
+    constructor(message, errors = []) {
+        super(message);
+        this.name = "ConfigError";
+        this.errors = errors;
+    }
+}
 
 /**
  * Reports the env findings envSchema made at import time, then checks servers.json.
- * Throws rather than exits, so the caller owns the exit and this stays testable.
- * @returns {{ warnings: string[] }} - The non-fatal findings, already logged
  * @throws {ConfigError} If the environment or servers.json is unusable
  */
 export function validateConfig() {
@@ -21,9 +31,8 @@ export function validateConfig() {
     }
 
     const servers = validateServersConfig();
-    const warnings = [...ENV_WARNINGS, ...servers.warnings];
 
-    for (const warning of warnings) {
+    for (const warning of [...ENV_WARNINGS, ...servers.warnings]) {
         configLogger.warn(warning);
     }
 
@@ -33,6 +42,4 @@ export function validateConfig() {
             servers.errors
         );
     }
-
-    return { warnings };
 }

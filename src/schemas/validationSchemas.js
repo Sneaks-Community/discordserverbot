@@ -83,7 +83,7 @@ const serverKeywordSchema = z
  * Unknown fields are stripped rather than rejected; validateServersConfig
  * reports them as warnings, so a stale config still starts.
  */
-const serverEntrySchema = z.object({
+export const serverEntrySchema = z.object({
     ip: serverIpSchema,
     keywords: z
         .array(serverKeywordSchema, { error: "keywords is required and must be an array" })

@@ -60,7 +60,8 @@ export default [
 
       // ── Node.js Rules (eslint-plugin-n) ──────────────────────────
       "n/no-missing-import": "warn",
-      "n/no-unpublished-import": "warn",
+      // Checked despite "private": production installs with --omit=dev, so a devDependency import crashes it.
+      "n/no-unpublished-import": ["warn", { ignorePrivate: false }],
       "n/no-process-exit": "off",
 
       // ── Import Rules (replaced import/order with perfectionist) ──

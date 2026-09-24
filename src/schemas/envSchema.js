@@ -27,6 +27,18 @@ function isHttpUrl(value) {
 }
 
 /**
+ * @param {string} defaultValue - Used when the variable is unset or blank
+ * @param {import('zod').ZodType} schema - Validates the trimmed value
+ * @returns {import('zod').ZodType}
+ */
+function withDefault(defaultValue, schema) {
+    return z.preprocess(
+        (value) => (value === undefined || String(value).trim() === "" ? defaultValue : String(value).trim()),
+        schema
+    );
+}
+
+/**
  * A whole-number variable, inclusive of both bounds.
  * @param {number} defaultValue - Used when the variable is unset or empty
  * @param {number} min
@@ -34,8 +46,8 @@ function isHttpUrl(value) {
  * @returns {import('zod').ZodType}
  */
 function intEnv(defaultValue, min, max) {
-    return z.preprocess(
-        (value) => (value === undefined || String(value).trim() === "" ? String(defaultValue) : String(value).trim()),
+    return withDefault(
+        String(defaultValue),
         z
             .string()
             .regex(/^-?\d+$/, "must be a whole number")
@@ -50,8 +62,8 @@ function intEnv(defaultValue, min, max) {
  * @returns {import('zod').ZodType}
  */
 function hexColorEnv(defaultValue) {
-    return z.preprocess(
-        (value) => (value === undefined || String(value).trim() === "" ? defaultValue : String(value).trim()),
+    return withDefault(
+        defaultValue,
         z
             .string()
             .regex(/^#?[0-9a-f]{6}$/i, "must be a hex color, for example #79C4D0")
@@ -65,8 +77,8 @@ function hexColorEnv(defaultValue) {
  * @returns {import('zod').ZodType}
  */
 function optionalIdEnv() {
-    return z.preprocess(
-        (value) => (value === undefined ? "" : String(value).trim()),
+    return withDefault(
+        "",
         z
             .string()
             .refine(
@@ -81,10 +93,7 @@ function optionalIdEnv() {
  * @returns {import('zod').ZodType}
  */
 function urlEnv(defaultValue) {
-    return z.preprocess(
-        (value) => (value === undefined || String(value).trim() === "" ? defaultValue : String(value).trim()),
-        z.string().refine(isHttpUrl, "must be an http(s) URL")
-    );
+    return withDefault(defaultValue, z.string().refine(isHttpUrl, "must be an http(s) URL"));
 }
 
 const MAP_IMAGE_BASE_URL_DEFAULT = "https://bans.snksrv.com/images/maps/";
@@ -140,35 +149,29 @@ export const DEFAULT_LOG_LEVEL = "info";
  * Kept out of envSchema: pino throws on a bad level at import, before a logger exists to say why.
  * utils/logger.js applies this and falls back to DEFAULT_LOG_LEVEL with a warning instead.
  */
-export const logLevelSchema = z.preprocess(
-    (value) => (value === undefined || String(value).trim() === "" ? DEFAULT_LOG_LEVEL : String(value).trim().toLowerCase()),
-    z.enum(LOG_LEVELS, { error: `must be one of: ${LOG_LEVELS.join(", ")}` })
+export const logLevelSchema = withDefault(
+    DEFAULT_LOG_LEVEL,
+    z.string().toLowerCase().pipe(z.enum(LOG_LEVELS, { error: `must be one of: ${LOG_LEVELS.join(", ")}` }))
 );
 
 export const envSchema = z.object({
     ADMIN_ROLE_ID: optionalIdEnv(),
     BOT_ACTIVITY_TEXT: activityTextEnv,
-    BOT_ACTIVITY_TYPE: z.preprocess(
-        (value) => (value === undefined || String(value).trim() === "" ? "custom" : String(value).trim().toLowerCase()),
-        z.enum(ACTIVITY_TYPES, { error: `must be one of: ${ACTIVITY_TYPES.join(", ")}` })
+    BOT_ACTIVITY_TYPE: withDefault(
+        "custom",
+        z.string().toLowerCase().pipe(z.enum(ACTIVITY_TYPES, { error: `must be one of: ${ACTIVITY_TYPES.join(", ")}` }))
     ),
-    DATABASE_PATH: z.preprocess(
-        (value) => (value === undefined || String(value).trim() === "" ? "db.sqlite" : String(value).trim()),
-        z.string().min(1, "cannot be empty")
-    ),
+    DATABASE_PATH: withDefault("db.sqlite", z.string()),
     // Required: the bot leaves every other guild. Empty would open the admin
     // commands, which act on the whole database, to any guild's Administrator.
-    DISCORD_GUILD_ID: z.preprocess(
-        (value) => (value === undefined ? "" : String(value).trim()),
+    DISCORD_GUILD_ID: withDefault(
+        "",
         z.string().refine(
             (value) => discordIdSchema.safeParse(value).success,
             "is required and must be a Discord ID (17-19 digits)"
         )
     ),
-    DISCORD_TOKEN: z.preprocess(
-        (value) => (value === undefined ? "" : String(value).trim()),
-        z.string().min(1, "is required and must not be empty")
-    ),
+    DISCORD_TOKEN: withDefault("", z.string().min(1, "is required and must not be empty")),
     // No message ID is configured: the bot owns its server list message (db/embedMessage.js).
     EMBED_CHANNEL_ID: optionalIdEnv(),
     // Exactly six digits: anything wider than 24-bit RGB makes EmbedBuilder throw
@@ -179,10 +182,7 @@ export const envSchema = z.object({
     // raising this multiplies how long one unreachable server takes.
     GAMEDIG_MAX_RETRIES: intEnv(4, 0, 10),
     // Loopback by default: only reachable from the container's own HEALTHCHECK
-    HEALTH_HOST: z.preprocess(
-        (value) => (value === undefined || String(value).trim() === "" ? "127.0.0.1" : String(value).trim()),
-        z.string().min(1, "cannot be empty")
-    ),
+    HEALTH_HOST: withDefault("127.0.0.1", z.string()),
     // 0 means disabled, not "pick a port". Defaults to the port the image's
     // HEALTHCHECK probes, so Docker works with nothing set anywhere.
     HEALTH_PORT: intEnv(3000, 0, 65535),
