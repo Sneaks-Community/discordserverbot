@@ -22,9 +22,11 @@ export function initDB() {
     // A repeat call must not leak the previous connection or its statements.
     closeDB();
     db = new Database(dbPath);
-    db.pragma("journal_mode = WAL");
-    // Wait out a WAL checkpoint or open sqlite3 shell instead of throwing SQLITE_BUSY.
-    // better-sqlite3 blocks the process meanwhile; 5s outlasts a checkpoint.
+    // Every committed change lives in this one file, with no -wal beside it. Explicit,
+    // though it is SQLite's default, because a file once switched to WAL stays in WAL.
+    db.pragma("journal_mode = DELETE");
+    // Wait out a sqlite3 shell or .backup holding a lock instead of throwing SQLITE_BUSY.
+    // better-sqlite3 blocks the process meanwhile; 5s outlasts a backup of this small file.
     db.pragma("busy_timeout = 5000");
 
     const initTransaction = db.transaction(() => {

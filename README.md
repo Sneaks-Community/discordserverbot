@@ -161,9 +161,9 @@ docker compose pull && docker compose up -d   # Docker
 
 ## Backups
 
-Follows and the tracked embed message are the only state on disk. The database runs in WAL mode,
-so copying `db.sqlite` with `cp` can capture a stale or torn snapshot. Use SQLite's online
-backup, which is safe while the bot is running:
+Follows and the tracked embed message are the only state on disk, all of it in `db.sqlite`.
+Copying that file with `cp` while the bot writes can capture a torn snapshot, so use SQLite's
+online backup, which is safe while the bot is running:
 
 ```bash
 # Docker: streamed out, since docker cp cannot read the container's tmpfs /tmp
@@ -178,15 +178,15 @@ megabytes. To restore:
 
 ```bash
 docker compose stop
-docker compose run --rm -T --entrypoint sh discordserverbot -c 'rm -f /app/data/db.sqlite-wal /app/data/db.sqlite-shm && cat > /app/data/db.sqlite' < db-2026-08-26.sqlite
+docker compose run --rm -T --entrypoint sh discordserverbot -c 'rm -f /app/data/db.sqlite-* && cat > /app/data/db.sqlite' < db-2026-08-26.sqlite
 docker compose start
 ```
 
-This deletes stale `-wal`/`-shm` files, which a killed bot leaves behind and SQLite would replay
-over the restored file. It streams the file in as the bot's user; `docker compose cp` would leave
-it owned by root and read-only to the bot.
+This first deletes any `db.sqlite-*` file beside the database, such as the journal a bot killed
+mid-write leaves behind, which SQLite would otherwise apply to the restored file. It streams the
+file in as the bot's user; `docker compose cp` would leave it owned by root and read-only to the bot.
 
-Under Node, stop the bot and replace `db.sqlite` (and any `-wal`/`-shm` beside it) directly.
+Under Node, stop the bot, delete any `db.sqlite-*` files, and replace `db.sqlite` directly.
 
 ## Environment Variables
 

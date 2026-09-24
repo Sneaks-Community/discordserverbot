@@ -1,6 +1,6 @@
 /**
  * The connection lifecycle, checked against the file on disk rather than through
- * the module that created it: the schema, the WAL pragma, the statement cache
+ * the module that created it: the schema, the journal mode, the statement cache
  * belonging to one connection, and the index that lets getAllFollows return rows
  * in order without a sort step.
  *
@@ -9,7 +9,7 @@
  */
 
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, it } from "node:test";
@@ -77,8 +77,12 @@ it("drops an older database's discord_id index and looks users up through the UN
     assert.ok(plan.includes("sqlite_autoindex_players_follow_1"), plan);
 });
 
-it("puts the database in WAL mode", () => {
-    assert.equal(withRawDatabase((raw) => raw.pragma("journal_mode", { simple: true })), "wal");
+it("switches a WAL database to DELETE journal mode", () => {
+    withRawDatabase((raw) => raw.pragma("journal_mode = WAL"));
+    initDB();
+
+    assert.equal(withRawDatabase((raw) => raw.pragma("journal_mode", { simple: true })), "delete");
+    assert.equal(existsSync(`${dbPath}-wal`), false);
 });
 
 it("returns getAllFollows' rows in order without sorting them", () => {

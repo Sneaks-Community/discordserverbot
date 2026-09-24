@@ -376,7 +376,6 @@ async function gracefulShutdown(signal, initialExitCode = 0) {
         exitCode = 1;
     }
 
-    // Separate try: the DB must close even if destroy failed, or SQLite skips its WAL checkpoint.
     try {
         closeDB();
     } catch (dbError) {
@@ -407,13 +406,6 @@ process.on("unhandledRejection", (reason) => {
 
 process.on("uncaughtException", async (err) => {
     botLogger.fatal({ err }, "Uncaught exception");
-
-    // Best effort: an open connection skips SQLite's WAL checkpoint.
-    try {
-        closeDB();
-    } catch (dbError) {
-        botLogger.error({ err: dbError }, "Failed to close the database during crash exit");
-    }
 
     // Registering this handler stops Node exiting on its own, so the flush can be
     // awaited; flushLogs is capped, so a broken process cannot linger here.
