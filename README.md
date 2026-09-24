@@ -17,9 +17,9 @@ keeps a channel message in sync with their status, and DMs users when a followed
 - **Slash commands**: all interaction is through slash commands, rate limited per user
 - **Automatic cleanup**: a member's follows are removed when they leave the guild (needs the
   privileged Server Members Intent, see [Discord Application](#discord-application))
-- **Resilient**: game-server queries and Discord calls retry with exponential backoff and
-  jitter, while permanent failures are reported once with a remediation hint instead of being
-  retried forever
+- **Resilient**: a failed update is retried on the next tick, and the fallback post retries with
+  exponential backoff and jitter, while permanent failures are reported once with a remediation
+  hint instead of being retried forever
 
 ## Commands
 
@@ -41,7 +41,7 @@ keeps a channel message in sync with their status, and DMs users when a followed
 |---------|-------------|
 | `/listallfollows` | List all users and their followed maps |
 | `/testnotify <map>` | DM yourself a sample notification for a map |
-| `/removeuser <userID>` | Remove all map follows for a specific user |
+| `/removeuser <userid>` | Remove all map follows for a specific user |
 
 The bot accepts these from a holder of `ADMIN_ROLE_ID`, from anyone with the Discord
 **Administrator** permission, and from the guild owner. Discord itself only shows them to the
@@ -101,7 +101,7 @@ git.
    nothing else to create; give it a channel of its own and nobody has to scroll past chat to
    see the servers.
 
-4. **Edit both files.** `.env` needs at least `DISCORD_TOKEN` (see
+4. **Edit both files.** `.env` needs at least `DISCORD_TOKEN` and `DISCORD_GUILD_ID` (see
    [Environment Variables](#environment-variables)), and `servers.json` needs your game servers
    (see [Server Configuration](#server-configuration)).
 
@@ -166,9 +166,8 @@ so copying `db.sqlite` with `cp` can capture a stale or torn snapshot. Use SQLit
 backup, which is safe while the bot is running:
 
 ```bash
-# Docker: sqlite3 is in the image, /tmp is writable tmpfs and clears on restart
-docker compose exec discordserverbot sqlite3 /app/data/db.sqlite ".backup /tmp/db.bak"
-docker compose cp discordserverbot:/tmp/db.bak "db-$(date +%F).sqlite"
+# Docker: streamed out, since docker cp cannot read the container's tmpfs /tmp
+docker compose exec -T discordserverbot sh -c 'sqlite3 /app/data/db.sqlite ".backup /tmp/db.bak" && cat /tmp/db.bak' > "db-$(date +%F).sqlite"
 
 # Node
 sqlite3 db.sqlite ".backup db-$(date +%F).sqlite"
@@ -179,16 +178,13 @@ megabytes. To restore:
 
 ```bash
 docker compose stop
-docker compose cp db-2026-08-26.sqlite discordserverbot:/app/data/db.sqlite
+docker compose run --rm -T --entrypoint sh discordserverbot -c 'rm -f /app/data/db.sqlite-wal /app/data/db.sqlite-shm && cat > /app/data/db.sqlite' < db-2026-08-26.sqlite
 docker compose start
 ```
 
-A clean stop checkpoints the WAL and leaves no sidecar files. If the bot was killed instead,
-delete the stale ones first, or they will be replayed over the restored file:
-
-```bash
-docker compose run --rm --entrypoint sh discordserverbot -c 'rm -f /app/data/db.sqlite-wal /app/data/db.sqlite-shm'
-```
+This deletes stale `-wal`/`-shm` files, which a killed bot leaves behind and SQLite would replay
+over the restored file. It streams the file in as the bot's user; `docker compose cp` would leave
+it owned by root and read-only to the bot.
 
 Under Node, stop the bot and replace `db.sqlite` (and any `-wal`/`-shm` beside it) directly.
 
@@ -196,8 +192,8 @@ Under Node, stop the bot and replace `db.sqlite` (and any `-wal`/`-shm` beside i
 
 Every value is validated at startup. A malformed or out-of-range one aborts startup with a
 message naming the variable and its accepted range rather than being silently corrected, so the
-bot never runs half configured. Leaving a variable unset, or setting it to an empty string,
-selects its default.
+bot never runs half configured. Leaving a variable unset selects its default; so does an empty
+value, except where the table says empty disables something.
 
 | Variable | Required | Default | Valid range | Description |
 |----------|----------|---------|-------------|-------------|
@@ -221,7 +217,7 @@ selects its default.
 | `MAP_IMAGE_BASE_URL` | No | `https://bans.snksrv.com/images/maps/` | http(s) URL ending in `/`, or empty | Map thumbnails are requested as `<base><mapname>.jpg`. A map the host has no image for simply renders without one. Empty disables map images |
 | `RATE_LIMIT_FOLLOW_PER_MINUTE` | No | `5` | 1 to 1000 | Max follow commands per minute per user |
 | `RATE_LIMIT_UNFOLLOW_PER_MINUTE` | No | `5` | 1 to 1000 | Max unfollow commands per minute per user |
-| `RATE_LIMIT_NOTIFICATION_PER_MINUTE` | No | `10` | 1 to 1000 | Max map-change DMs per minute per user. Repeats of the same map (for example one map live on two servers) are always collapsed to one DM and do not count against this |
+| `RATE_LIMIT_NOTIFICATION_PER_MINUTE` | No | `10` | 1 to 1000 | Max map-change DMs per minute per user. The same map again within a minute (for example live on two servers) sends no second DM and does not count against this; the one DM names the server seen first |
 | `MAX_FOLLOWS_PER_USER` | No | `50` | 1 to 10000 | Maximum maps a single user may follow at once |
 | `MAX_NOTIFICATION_RECIPIENTS` | No | `200` | 1 to 10000 | Maximum users DMed for a single map change; the rest are logged and counted in the fallback post |
 | `HEALTH_PORT` | No | `3000` | 0 to 65535 | Port for the `GET /health` liveness endpoint, which reports 503 once no update tick has started in three intervals. This is the port the image's `HEALTHCHECK` probes, so leave it alone under Docker; `0` opens no socket and makes that healthcheck fail |
