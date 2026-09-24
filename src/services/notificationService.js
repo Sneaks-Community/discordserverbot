@@ -213,10 +213,7 @@ async function deliverNotification(user, event) {
             return DELIVERY.suppressed;
         }
 
-        // Mentions denied: the map name and server nick come from the game
-        // server, and escapeForDiscord neutralizes markdown but not "@".
         await bot.users.send(user.discord_id, {
-            allowedMentions: { parse: [] },
             content: buildNotificationContent(event),
             embeds: [buildMapNotificationEmbed(event)]
         });
@@ -312,10 +309,7 @@ async function sendFallbackNotification(event, undeliverable) {
                     `${permCheck.error} in the fallback channel ${config.fallbackChannelId}; grant the bot those permissions there`
                 );
             }
-            // As with the DM, and it matters more here: an @everyone slipping
-            // through would reach the whole guild.
             await channel.send({
-                allowedMentions: { parse: [] },
                 content: `${buildNotificationContent(event)}\n${describeUndeliverable(undeliverable)}`,
                 embeds: [buildMapNotificationEmbed(event)],
                 enforceNonce: true,

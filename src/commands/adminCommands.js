@@ -79,5 +79,5 @@ export async function handleSlashRemoveuser(interaction) {
 
     unfollowAll(userIdValidation.data);
     // A real mention in content: deny pings rather than rely on the ephemeral flag staying put.
-    await interaction.reply({ allowedMentions: { parse: [] }, content: `Removed all maps from user <@${userId}>.`, flags: MessageFlags.Ephemeral });
+    await interaction.reply({ content: `Removed all maps from user <@${userId}>.`, flags: MessageFlags.Ephemeral });
 }

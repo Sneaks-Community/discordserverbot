@@ -45,6 +45,8 @@ function isNotClient(entry) {
 const sweepAllButClient = () => isNotClient;
 
 const bot = new Discord.Client({
+    // Server and map names come straight from the game servers; deny mentions on every send.
+    allowedMentions: { parse: [] },
     intents: [
         GatewayIntentBits.Guilds,
         // Privileged, for guildMemberRemove: enable "Server Members Intent" in the
@@ -150,16 +152,6 @@ async function intervalFunction() {
 }
 
 /**
- * Mentions are denied everywhere below: the embed carries server and map names
- * straight from the game servers, and both posting and editing resolve mentions.
- * @param {import('discord.js').EmbedBuilder} embed
- * @returns {{ allowedMentions: { parse: [] }, embeds: import('discord.js').EmbedBuilder[] }}
- */
-function embedPayload(embed) {
-    return { allowedMentions: { parse: [] }, embeds: [embed] };
-}
-
-/**
  * @param {import('discord.js').TextChannel} channel
  * @param {string} messageId
  * @param {import('discord.js').EmbedBuilder} embed
@@ -168,7 +160,7 @@ function embedPayload(embed) {
 async function editTrackedMessage(channel, messageId, embed) {
     try {
         const message = await channel.messages.fetch(messageId);
-        await message.edit(embedPayload(embed));
+        await message.edit({ embeds: [embed] });
         return true;
     } catch (err) {
         // getTerminalReason treats this code as terminal; here a deleted
@@ -229,7 +221,7 @@ async function publishEmbed(embed) {
         }
 
         // When REST re-sends a timed-out post, the nonce makes Discord return the first message.
-        const message = await channel.send({ ...embedPayload(embed), enforceNonce: true, nonce: SnowflakeUtil.generate().toString() });
+        const message = await channel.send({ embeds: [embed], enforceNonce: true, nonce: SnowflakeUtil.generate().toString() });
 
         // Not left to the catch below: the post succeeded, so that log would mislead.
         try {
