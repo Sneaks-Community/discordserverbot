@@ -34,9 +34,9 @@ for (const server of serverObjectKeys) {
     oldData[server] = "";
 }
 
-/** @returns {object} - A copy, so callers cannot mutate the live snapshot */
+/** @returns {object} - Read-only; refresh swaps in a new object rather than mutating this one */
 export function getServerData() {
-    return { ..._serverData };
+    return _serverData;
 }
 
 /**
@@ -45,11 +45,6 @@ export function getServerData() {
  */
 export function isServerDataEmpty() {
     return Object.keys(_serverData).length === 0;
-}
-
-/** @param {object} newData */
-function setServerData(newData) {
-    _serverData = { ...newData };
 }
 
 /**
@@ -128,52 +123,46 @@ export async function getInfo(server, index, wasOffline = false) {
     const [host, rawPort] = server.ip.split(":");
     const port = rawPort === undefined ? DEFAULT_SERVER_PORT : Number(rawPort);
 
-    let valid = true;
+    let res;
 
-    const res = await GameDig.query({
-        attemptTimeout: QUERY_ATTEMPT_TIMEOUT_MS,
-        host: host,
-        maxRetries: config.gamedigMaxRetries,
-        port: port,
-        socketTimeout: QUERY_SOCKET_TIMEOUT_MS,
-        type: server.protocol || "csgo"
-    }).catch((err) => {
+    try {
+        res = await GameDig.query({
+            attemptTimeout: QUERY_ATTEMPT_TIMEOUT_MS,
+            host: host,
+            maxRetries: config.gamedigMaxRetries,
+            port: port,
+            socketTimeout: QUERY_SOCKET_TIMEOUT_MS,
+            type: server.protocol || "csgo"
+        });
+    } catch (err) {
         // Once per outage: a server down for a day would otherwise log every tick.
         serviceLogger[wasOffline ? "debug" : "warn"]({ err, serverIp: server.ip }, "GameDig query failed");
-        valid = false;
-    });
-
-    let data;
-
-    if (valid) {
-        // Names are escaped at render time, so this only ensures a usable string
-        const sanitizedPlayers = res.players.map((player) => sanitizeEntry(player, "Unknown", "Player name"));
-        const sanitizedBots = res.bots.map((bot) => sanitizeEntry(bot, "Unknown Bot", "Bot name"));
-
-        const { numBots, numPlayers } = readCounts(res);
-        // Server-supplied for some protocols, so only a number reaches the embeds
-        const maxPlayers = Number(res.maxplayers);
-
-        data = {
-            bots: sanitizedBots,
-            // Server-supplied for some protocols, and the DM inserts it raw after
-            // steam://connect/, so anything but host:port gives way to the configured ip.
-            fullIP: typeof res.connect === "string" && /^[A-Za-z0-9.-]{1,253}:\d{1,5}$/.test(res.connect) ? res.connect : server.ip,
-            index: index,
-            keywords: server.keywords,
-            map: normalizeMapName(res.map),
-            maxPlayers: Number.isFinite(maxPlayers) ? maxPlayers : undefined,
-            name: server.nick,
-            numBots: numBots,
-            numPlayers: numPlayers, // Humans only; bots are counted separately
-            online: true,
-            players: sanitizedPlayers
-        };
-    } else {
-        data = buildOfflineServerData(server, index);
+        return buildOfflineServerData(server, index);
     }
 
-    return data;
+    // Names are escaped at render time, so this only ensures a usable string
+    const sanitizedPlayers = res.players.map((player) => sanitizeEntry(player, "Unknown", "Player name"));
+    const sanitizedBots = res.bots.map((bot) => sanitizeEntry(bot, "Unknown Bot", "Bot name"));
+
+    const { numBots, numPlayers } = readCounts(res);
+    // Server-supplied for some protocols, so only a number reaches the embeds
+    const maxPlayers = Number(res.maxplayers);
+
+    return {
+        bots: sanitizedBots,
+        // Server-supplied for some protocols, and the DM inserts it raw after
+        // steam://connect/, so anything but host:port gives way to the configured ip.
+        fullIP: typeof res.connect === "string" && /^[A-Za-z0-9.-]{1,253}:\d{1,5}$/.test(res.connect) ? res.connect : server.ip,
+        index: index,
+        keywords: server.keywords,
+        map: normalizeMapName(res.map),
+        maxPlayers: Number.isFinite(maxPlayers) ? maxPlayers : undefined,
+        name: server.nick,
+        numBots: numBots,
+        numPlayers: numPlayers, // Humans only; bots are counted separately
+        online: true,
+        players: sanitizedPlayers
+    };
 }
 
 /**
@@ -244,7 +233,7 @@ export async function refresh() {
             )
         );
 
-        setServerData(Object.fromEntries(results));
+        _serverData = Object.fromEntries(results);
 
         return true;
     } finally {
