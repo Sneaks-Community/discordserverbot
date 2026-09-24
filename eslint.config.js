@@ -26,18 +26,7 @@ export default [
       perfectionist: perfectionistPlugin
     },
     languageOptions: {
-      globals: {
-        console: "readonly",
-        setInterval: "readonly",
-        setTimeout: "readonly",
-        clearInterval: "readonly",
-        clearTimeout: "readonly",
-        process: "readonly",
-        fetch: "readonly",
-        Buffer: "readonly",
-        URL: "readonly",
-        URLSearchParams: "readonly"
-      }
+      globals: nPlugin.configs["flat/recommended-module"].languageOptions.globals
     },
     rules: {
       // ── Style Rules ──────────────────────────────────────────────
