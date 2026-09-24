@@ -4,7 +4,7 @@ import { registerSlashCommands, handleInteraction } from "./commands/index.js";
 import { config, validateConfig } from "./config/index.js";
 import { initDB, closeDB, unfollowAll, clearEmbedMessage, getEmbedMessage, setEmbedMessage } from "./db/index.js";
 import { makeEmbed } from "./embeds/serverEmbeds.js";
-import { startCleanupIntervals, clearCleanupIntervals } from "./services/cacheService.js";
+import { startCleanupInterval, clearCleanupInterval } from "./services/cacheService.js";
 import { reconcileFollows } from "./services/followReconciliation.js";
 import { recordTick, startHealthServer, stopHealthServer } from "./services/healthService.js";
 import { notifyUsers, initNotificationService } from "./services/notificationService.js";
@@ -101,7 +101,7 @@ bot.on(Events.ClientReady, async () => {
 
         await intervalFunction();
         embedInterval = setInterval(intervalFunction, config.serverUpdateIntervalMs);
-        startCleanupIntervals();
+        startCleanupInterval();
 
         // Not awaited: a full member fetch is slow and nothing depends on it.
         void reconcileFollows(bot);
@@ -356,7 +356,7 @@ async function gracefulShutdown(signal, initialExitCode = 0) {
         embedInterval = null;
     }
 
-    clearCleanupIntervals();
+    clearCleanupInterval();
 
     // Before destroy(): the listener must not outlive the shutdown.
     stopHealthServer();

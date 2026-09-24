@@ -9,7 +9,6 @@ const dmRefusals = new Map();
 
 const DM_REFUSAL_COOLDOWN_MS = 3600000;
 
-const MAX_RATE_LIMIT_MAP_SIZE = 5000;
 const MAX_DM_REFUSAL_SIZE = 5000;
 
 const CLEANUP_INTERVAL_MS = 300000;
@@ -68,38 +67,13 @@ function cleanupRateLimits() {
         }
     }
 
-    // Still over the cap: evict the users whose oldest action is oldest. No
-    // recency ordering here, unlike dmRefusals, so this has to sort.
-    if (userActionRateLimits.size >= MAX_RATE_LIMIT_MAP_SIZE) {
-        const userTimestamps = [];
-        for (const [userId, actions] of userActionRateLimits.entries()) {
-            let oldestTs = Infinity;
-            for (const action of Object.keys(actions)) {
-                if (actions[action].length > 0) {
-                    oldestTs = Math.min(oldestTs, actions[action][0]);
-                }
-            }
-            if (oldestTs !== Infinity) {
-                userTimestamps.push({ oldestTs, userId });
-            }
-        }
-
-        userTimestamps.sort((a, b) => a.oldestTs - b.oldestTs);
-        const toDelete = userTimestamps.slice(0, userActionRateLimits.size - MAX_RATE_LIMIT_MAP_SIZE + 100);
-        for (const { userId } of toDelete) {
-            userActionRateLimits.delete(userId);
-            cleaned++;
-        }
-    }
-
     if (cleaned > 0) {
         serviceLogger.info(`Rate limit cleanup: removed ${cleaned} users, current size: ${userActionRateLimits.size}`);
     }
 }
 
 /**
- * Prunes an expired entry as it reads it, so a user who reopens their DMs is
- * eligible again on the next map change rather than at the next sweep.
+ * Expires entries on read; markDmRefused's size cap bounds the ones never read again.
  * @param {string} userId
  * @returns {boolean}
  */
@@ -131,33 +105,14 @@ export function markDmRefused(userId) {
     dmRefusals.set(userId, Date.now());
 }
 
-/** Drops expired refusals for users who never come up in a fanout again. */
-function cleanupDmRefusals() {
-    if (dmRefusals.size === 0) return;
+/** @type {NodeJS.Timeout | undefined} */
+let cleanupInterval;
 
-    const now = Date.now();
-    let cleaned = 0;
-    for (const [userId, refusedAt] of dmRefusals) {
-        // Oldest first, so the first live entry means every later one is live too.
-        if (now - refusedAt < DM_REFUSAL_COOLDOWN_MS) break;
-        dmRefusals.delete(userId);
-        cleaned++;
-    }
-
-    if (cleaned > 0) {
-        serviceLogger.info(`DM refusal cleanup: removed ${cleaned} entries, current size: ${dmRefusals.size}`);
-    }
+export function startCleanupInterval() {
+    cleanupInterval = setInterval(cleanupRateLimits, CLEANUP_INTERVAL_MS);
 }
 
-/** @type {NodeJS.Timeout[]} */
-let cleanupIntervalRefs = [];
-
-export function startCleanupIntervals() {
-    cleanupIntervalRefs.push(setInterval(cleanupRateLimits, CLEANUP_INTERVAL_MS));
-    cleanupIntervalRefs.push(setInterval(cleanupDmRefusals, CLEANUP_INTERVAL_MS));
-}
-
-export function clearCleanupIntervals() {
-    cleanupIntervalRefs.forEach(id => clearInterval(id));
-    cleanupIntervalRefs = [];
+export function clearCleanupInterval() {
+    clearInterval(cleanupInterval);
+    cleanupInterval = undefined;
 }
