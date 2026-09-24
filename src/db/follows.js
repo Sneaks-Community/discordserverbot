@@ -51,7 +51,7 @@ export function getFollowerIds() {
  */
 export function getUserFollows(discord_id) {
     const validatedDiscordId = validateOrThrow(discordIdSchema, discord_id, "getUserFollows/discord_id");
-    return getStatement("SELECT map_name FROM players_follow WHERE discord_id = ?").all(validatedDiscordId);
+    return getStatement("SELECT map_name FROM players_follow WHERE discord_id = ? ORDER BY map_name").all(validatedDiscordId);
 }
 
 /**
