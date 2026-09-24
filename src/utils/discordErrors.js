@@ -13,7 +13,6 @@ const TERMINAL_API_CODES = new Map([
     [RESTJSONErrorCodes.UnknownChannel, "Unknown Channel: the configured channel ID does not exist, or the bot is not in that guild"],
     [RESTJSONErrorCodes.UnknownMessage, "Unknown Message: that message no longer exists in the channel"],
     [RESTJSONErrorCodes.MissingAccess, "Missing Access: the bot cannot see that channel, grant it View Channel"],
-    [RESTJSONErrorCodes.CannotEditMessageAuthoredByAnotherUser, "Cannot edit a message authored by another user: the tracked server list message was not posted by this bot, so clear the embed_message row and let it post a new one"],
     [RESTJSONErrorCodes.CannotSendMessagesToThisUser, "Cannot send messages to this user: their DMs are closed to the bot, or they have blocked it"],
     [RESTJSONErrorCodes.MissingPermissions, "Missing Permissions: the bot lacks a required permission in that channel"],
     [RESTJSONErrorCodes.CannotSendMessagesToThisUserDueToHavingNoMutualGuilds, "Cannot send messages to this user: the bot no longer shares a guild with them"]

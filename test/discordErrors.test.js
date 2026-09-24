@@ -15,7 +15,6 @@ const TERMINAL_CODES = [
     RESTJSONErrorCodes.UnknownChannel,
     RESTJSONErrorCodes.UnknownMessage,
     RESTJSONErrorCodes.MissingAccess,
-    RESTJSONErrorCodes.CannotEditMessageAuthoredByAnotherUser,
     RESTJSONErrorCodes.CannotSendMessagesToThisUser,
     RESTJSONErrorCodes.MissingPermissions,
     RESTJSONErrorCodes.CannotSendMessagesToThisUserDueToHavingNoMutualGuilds

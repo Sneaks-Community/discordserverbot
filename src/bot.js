@@ -155,7 +155,7 @@ async function intervalFunction() {
  * @param {import('discord.js').TextChannel} channel
  * @param {string} messageId
  * @param {import('discord.js').EmbedBuilder} embed
- * @returns {Promise<boolean>} - False if the message is gone; other failures throw
+ * @returns {Promise<boolean>} - False if a new message must replace it; other failures throw
  */
 async function editTrackedMessage(channel, messageId, embed) {
     try {
@@ -167,6 +167,12 @@ async function editTrackedMessage(channel, messageId, embed) {
         // message is recoverable by posting another.
         if (err?.code === RESTJSONErrorCodes.UnknownMessage) {
             botLogger.warn({ channelId: channel.id, messageId }, "The server list message is gone; posting a new one");
+            return false;
+        }
+
+        // Happens after a bot token change with the database kept.
+        if (err?.code === RESTJSONErrorCodes.CannotEditMessageAuthoredByAnotherUser) {
+            botLogger.warn({ channelId: channel.id, messageId }, "The server list message was posted by another account and cannot be edited; posting a new one (delete the old one by hand)");
             return false;
         }
 
