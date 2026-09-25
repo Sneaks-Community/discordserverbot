@@ -12,8 +12,8 @@ keeps a channel message in sync with their status, and DMs users when a followed
 - **Server monitoring**: queries every configured server on one interval and keeps a single
   message in a channel of your choosing updated with a rich embed of their status, posting that
   message itself the first time
-- **Map notifications**: DMs everyone following a map when it appears on a server, falling back
-  to a configured channel for recipients whose DMs are closed
+- **Map notifications**: DMs everyone following a map when it appears on a server, pinging them
+  in a configured channel instead when their DMs are closed
 - **Slash commands**: all interaction is through slash commands, rate limited per user
 - **Automatic cleanup**: a member's follows are removed when they leave the guild (needs the
   privileged Server Members Intent, see [Discord Application](#discord-application))
@@ -218,7 +218,7 @@ value, except where the table says empty disables something.
 | `RATE_LIMIT_UNFOLLOW_PER_MINUTE` | No | `5` | 1 to 1000 | Max unfollow commands per minute per user |
 | `RATE_LIMIT_NOTIFICATION_PER_MINUTE` | No | `10` | 1 to 1000 | Max map-change DMs per minute per user. The same map again within a minute (for example live on two servers) sends no second DM and does not count against this; the one DM names the server seen first |
 | `MAX_FOLLOWS_PER_USER` | No | `50` | 1 to 10000 | Maximum maps a single user may follow at once |
-| `MAX_NOTIFICATION_RECIPIENTS` | No | `200` | 1 to 10000 | Maximum users DMed for a single map change; the rest are logged and counted in the fallback post |
+| `MAX_NOTIFICATION_RECIPIENTS` | No | `200` | 1 to 10000 | Maximum users DMed for a single map change; the rest are logged and pinged in the fallback post |
 | `HEALTH_PORT` | No | `3000` | 0 to 65535 | Port for the `GET /health` liveness endpoint, which reports 503 once no update tick has started in three intervals. This is the port the image's `HEALTHCHECK` probes, so leave it alone under Docker; `0` opens no socket and makes that healthcheck fail |
 | `HEALTH_HOST` | No | `127.0.0.1` | non-empty | Address the health endpoint binds to. Loopback keeps it reachable from inside the container only; set `0.0.0.0` and publish the port for an external monitor |
 

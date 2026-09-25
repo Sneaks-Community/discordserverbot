@@ -23,6 +23,10 @@ const NOTIFICATION_MAX_PER_MAP = 1;
 // is the real throttle, so a larger number only queues deeper.
 const NOTIFICATION_CONCURRENCY = 5;
 
+// Users pinged per fallback post: inside Discord's 100 allowed mentions, and with
+// the announcement, inside its 2000 characters of content.
+const FALLBACK_MAX_MENTIONS = 50;
+
 /**
  * What became of one recipient's DM. Only `failed` and `refused` reach the
  * fallback channel; a suppressed duplicate is a deliberate drop.
@@ -63,7 +67,6 @@ export async function notifyUsers(mapName, serverObj) {
 
     // Dropped before the cap, so the fanout budget goes to users who can receive a DM.
     const deliverable = followers.filter((follower) => !isDmRefused(follower.discord_id));
-    const inCooldown = followers.length - deliverable.length;
 
     const recipients = deliverable.slice(0, config.maxNotificationRecipients);
     const overCap = deliverable.length - recipients.length;
@@ -90,10 +93,13 @@ export async function notifyUsers(mapName, serverObj) {
     const limit = pLimit(NOTIFICATION_CONCURRENCY);
     const outcomes = await Promise.all(recipients.map((user) => limit(() => deliverNotification(user, event))));
 
+    // Followers never attempted, in cooldown or over the cap, missed the DM too.
+    const done = new Set(recipients.filter((_, i) => outcomes[i] === DELIVERY.delivered || outcomes[i] === DELIVERY.suppressed));
+    const missed = followers.filter((follower) => !done.has(follower)).map((follower) => follower.discord_id);
+
     // One fallback message per map change, not one per failing recipient.
-    const undeliverable = tallyUndeliverable(outcomes, inCooldown, overCap);
-    if (undeliverable.total > 0) {
-        await sendFallbackNotification(event, undeliverable);
+    if (missed.length > 0) {
+        await sendFallbackNotification(event, missed);
     }
 }
 
@@ -108,40 +114,6 @@ export async function sendTestNotification(user, map) {
     const event = { ip: serverObj.ip, mapImage: getMapImage(map), mapName: map, server: serverObj.nick, serverObj };
 
     await user.send({ content: buildNotificationContent(event), embeds: [buildMapNotificationEmbed(event)] });
-}
-
-/**
- * @param {string[]} outcomes - One DELIVERY value per attempted recipient
- * @param {number} inCooldown - Recipients skipped before the attempt
- * @param {number} overCap - Followers past MAX_NOTIFICATION_RECIPIENTS
- * @returns {{failed: number, inCooldown: number, overCap: number, refused: number, total: number}}
- */
-function tallyUndeliverable(outcomes, inCooldown, overCap) {
-    const failed = outcomes.filter((outcome) => outcome === DELIVERY.failed).length;
-    const refused = outcomes.filter((outcome) => outcome === DELIVERY.refused).length;
-
-    return { failed, inCooldown, overCap, refused, total: failed + refused + inCooldown + overCap };
-}
-
-/**
- * One line, so the channel message says who missed out rather than only
- * repeating the announcement.
- * @param {object} undeliverable - Tally from tallyUndeliverable
- * @param {number} undeliverable.failed
- * @param {number} undeliverable.inCooldown
- * @param {number} undeliverable.overCap
- * @param {number} undeliverable.refused
- * @param {number} undeliverable.total
- * @returns {string}
- */
-function describeUndeliverable({ failed, inCooldown, overCap, refused, total }) {
-    const parts = [];
-    if (refused > 0) parts.push(`${refused} refused the DM`);
-    if (inCooldown > 0) parts.push(`${inCooldown} skipped after an earlier refusal`);
-    if (failed > 0) parts.push(`${failed} failed`);
-    if (overCap > 0) parts.push(`${overCap} over the recipient cap`);
-
-    return `_${total} follower${total === 1 ? "" : "s"} could not be DMed: ${parts.join(", ")}._`;
 }
 
 /**
@@ -272,19 +244,23 @@ async function resolveFallbackChannel(bot) {
 }
 
 /**
- * The one message per map change covering every recipient it could not reach.
+ * The one message per map change, pinging every follower the DM did not reach.
  * @param {object} event - Loop-invariant details shared by every recipient
- * @param {{failed: number, inCooldown: number, overCap: number, refused: number, total: number}} undeliverable
+ * @param {string[]} userIds - Discord IDs of those followers
  * @returns {Promise<void>}
  */
-async function sendFallbackNotification(event, undeliverable) {
+async function sendFallbackNotification(event, userIds) {
     const { mapName } = event;
 
     // Without this, an unconfigured fallback costs three retried throws with backoff.
     if (!config.fallbackChannelId) {
-        serviceLogger.debug({ map: mapName, undeliverable: undeliverable.total }, "No fallback channel configured, skipping fallback notification");
+        serviceLogger.debug({ map: mapName, undeliverable: userIds.length }, "No fallback channel configured, skipping fallback notification");
         return;
     }
+
+    const pinged = userIds.slice(0, FALLBACK_MAX_MENTIONS);
+    const unpinged = userIds.length - pinged.length;
+    const mentions = pinged.map((id) => `<@${id}>`).join(" ") + (unpinged > 0 ? ` and ${unpinged} more` : "");
 
     // One nonce for every attempt, so a retried post returns the first instead of repeating it.
     const nonce = SnowflakeUtil.generate().toString();
@@ -301,14 +277,16 @@ async function sendFallbackNotification(event, undeliverable) {
                 );
             }
             await channel.send({
-                content: `${buildNotificationContent(event)}\n${describeUndeliverable(undeliverable)}`,
+                // Replaces the client's deny-all for this send, so only these users are pinged.
+                allowedMentions: { users: pinged },
+                content: `${buildNotificationContent(event)}\n${mentions}`,
                 embeds: [buildMapNotificationEmbed(event)],
                 enforceNonce: true,
                 nonce
             });
         }, { isRetryable: isRetryableDiscordError });
 
-        serviceLogger.info({ map: mapName, ...undeliverable }, "Sent one fallback notification for the undeliverable recipients");
+        serviceLogger.info({ map: mapName, undeliverable: userIds.length }, "Sent one fallback notification for the undeliverable recipients");
     } catch (fallbackError) {
         const reason = getTerminalReason(fallbackError);
         if (reason) {
