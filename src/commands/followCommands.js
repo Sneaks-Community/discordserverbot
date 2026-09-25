@@ -78,9 +78,17 @@ export async function handleSlashFollow(interaction) {
  * @param {Interaction} interaction
  * @returns {Promise<void|Reply>} - Early returns carry the reply; no caller reads it
  */
-export async function handleSlashUnfollow(interaction) {
-    const rawMap = interaction.options.getString("map");
+export function handleSlashUnfollow(interaction) {
+    return unfollowAndReply(interaction, interaction.options.getString("map"));
+}
 
+/**
+ * Behind both /unfollow and the unfollow buttons on map alerts.
+ * @param {Interaction|import('discord.js').ButtonInteraction} interaction
+ * @param {string} rawMap - A map name, or "all"
+ * @returns {Promise<void|Reply>} - Early returns carry the reply; no caller reads it
+ */
+export async function unfollowAndReply(interaction, rawMap) {
     const userId = interaction.user.id;
 
     const withinLimit = await enforceRateLimit(interaction, {

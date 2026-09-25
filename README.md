@@ -13,8 +13,10 @@ keeps a channel message in sync with their status, and DMs users when a followed
   message in a channel of your choosing updated with a rich embed of their status, posting that
   message itself the first time
 - **Map notifications**: DMs everyone following a map when it appears on a server, pinging them
-  in a configured channel instead when their DMs are closed
-- **Slash commands**: all interaction is through slash commands, rate limited per user
+  in a configured channel instead when their DMs are closed. Buttons on every alert unfollow
+  that map or all maps, and work from the DM too
+- **Slash commands**: all interaction is through slash commands and the alert buttons, rate
+  limited per user
 - **Automatic cleanup**: a member's follows are removed when they leave the guild (needs the
   privileged Server Members Intent, see [Discord Application](#discord-application))
 - **Resilient**: a failed update is retried on the next tick, and the fallback post retries with
@@ -215,7 +217,7 @@ value, except where the table says empty disables something.
 | `OFFLINE_SERVER_IMAGE` | No | `https://i.imgur.com/WnS0Biz.png` | http(s) URL | Image used for an offline server |
 | `MAP_IMAGE_BASE_URL` | No | `https://bans.snksrv.com/images/maps/` | http(s) URL ending in `/`, or empty | Map thumbnails are requested as `<base><mapname>.jpg`. A map the host has no image for simply renders without one. Empty disables map images |
 | `RATE_LIMIT_FOLLOW_PER_MINUTE` | No | `5` | 1 to 1000 | Max follow commands per minute per user |
-| `RATE_LIMIT_UNFOLLOW_PER_MINUTE` | No | `5` | 1 to 1000 | Max unfollow commands per minute per user |
+| `RATE_LIMIT_UNFOLLOW_PER_MINUTE` | No | `5` | 1 to 1000 | Max unfollow commands and alert button presses per minute per user |
 | `RATE_LIMIT_NOTIFICATION_PER_MINUTE` | No | `10` | 1 to 1000 | Max map-change DMs per minute per user. The same map again within a minute (for example live on two servers) sends no second DM and does not count against this; the one DM names the server seen first |
 | `MAX_FOLLOWS_PER_USER` | No | `50` | 1 to 10000 | Maximum maps a single user may follow at once |
 | `MAX_NOTIFICATION_RECIPIENTS` | No | `200` | 1 to 10000 | Maximum users DMed for a single map change; the rest are logged and pinged in the fallback post |

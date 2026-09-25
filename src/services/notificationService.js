@@ -1,4 +1,4 @@
-import { SnowflakeUtil } from "discord.js";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, SnowflakeUtil } from "discord.js";
 import pLimit from "p-limit";
 
 import { config } from "../config/index.js";
@@ -26,6 +26,9 @@ const NOTIFICATION_CONCURRENCY = 5;
 // Users pinged per fallback post: inside Discord's 100 allowed mentions, and with
 // the announcement, inside its 2000 characters of content.
 const FALLBACK_MAX_MENTIONS = 50;
+
+// Alert button custom IDs: this, then what /unfollow's map option would take.
+export const UNFOLLOW_BUTTON_PREFIX = "unfollow:";
 
 /**
  * What became of one recipient's DM. Only `failed` and `refused` reach the
@@ -111,9 +114,13 @@ export async function notifyUsers(mapName, serverObj) {
  */
 export async function sendTestNotification(user, map) {
     const serverObj = { ip: "0.0.0.0:27015", nick: "Test Server" };
-    const event = { ip: serverObj.ip, mapImage: getMapImage(map), mapName: map, server: serverObj.nick, serverObj };
+    const event = { ip: serverObj.ip, mapImage: getMapImage(map), mapName: map, server: serverObj.nick, serverObj, validatedMapName: map };
 
-    await user.send({ content: buildNotificationContent(event), embeds: [buildMapNotificationEmbed(event)] });
+    await user.send({
+        components: [buildUnfollowButtons(event)],
+        content: buildNotificationContent(event),
+        embeds: [buildMapNotificationEmbed(event)]
+    });
 }
 
 /**
@@ -126,7 +133,9 @@ export async function sendTestNotification(user, map) {
  * @returns {import('discord.js').EmbedBuilder}
  */
 function buildMapNotificationEmbed({ mapImage, mapName, server, serverObj }) {
-    const embed = createBaseEmbed(`${mapName} is now on ${server}`)
+    // No "Last Updated" footer or timestamp: the message's own time already says when.
+    const embed = createBaseEmbed(`${mapName} is now on ${server}`, { footer: null })
+        .setTimestamp(null)
         .setDescription(`**__Players:__** ${formatPlayerCounts(serverObj)}`);
 
     if (mapImage) embed.setImage(mapImage);
@@ -144,6 +153,22 @@ function buildMapNotificationEmbed({ mapImage, mapName, server, serverObj }) {
  */
 function buildNotificationContent({ ip, mapName, server }) {
     return `${mapName} is now on ${server}!\nsteam://connect/${ip}`;
+}
+
+/**
+ * One button for the alert's map and one for all maps, each doing what /unfollow would.
+ * @param {object} event - Loop-invariant details shared by every recipient
+ * @param {string} event.validatedMapName
+ * @returns {ActionRowBuilder}
+ */
+function buildUnfollowButtons({ validatedMapName }) {
+    // A map named "all" would repeat the second button's custom ID, which Discord rejects.
+    const buttons = [...new Set([validatedMapName, "all"])].map((option) => new ButtonBuilder()
+        .setCustomId(`${UNFOLLOW_BUTTON_PREFIX}${option}`)
+        .setLabel(`Unfollow ${option}`)
+        .setStyle(ButtonStyle.Secondary));
+
+    return new ActionRowBuilder().addComponents(buttons);
 }
 
 /**
@@ -185,6 +210,7 @@ async function deliverNotification(user, event) {
         }
 
         await botInstance.users.send(user.discord_id, {
+            components: [buildUnfollowButtons(event)],
             content: buildNotificationContent(event),
             embeds: [buildMapNotificationEmbed(event)]
         });
@@ -279,6 +305,7 @@ async function sendFallbackNotification(event, userIds) {
             await channel.send({
                 // Replaces the client's deny-all for this send, so only these users are pinged.
                 allowedMentions: { users: pinged },
+                components: [buildUnfollowButtons(event)],
                 content: `${buildNotificationContent(event)}\n${mentions}`,
                 embeds: [buildMapNotificationEmbed(event)],
                 enforceNonce: true,

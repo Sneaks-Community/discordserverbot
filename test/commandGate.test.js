@@ -75,6 +75,7 @@ function interaction(fields) {
         guild: { ownerId: OWNER },
         guildId: GUILD,
         inGuild: () => inGuild,
+        isButton: () => false,
         isChatInputCommand: () => chatInput,
         member: { roles: [] },
         memberPermissions: { has: () => admin },

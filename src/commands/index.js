@@ -1,9 +1,11 @@
 import { MessageFlags } from "discord.js";
 
 import { config } from "../config/index.js";
+import { UNFOLLOW_BUTTON_PREFIX } from "../services/notificationService.js";
 import { commandLogger } from "../utils/logger.js";
 import { hasAdminRole } from "./adminAuth.js";
 import { buildSlashCommands, COMMANDS_BY_NAME } from "./definitions.js";
+import { unfollowAndReply } from "./followCommands.js";
 
 const slashCommands = buildSlashCommands();
 
@@ -25,6 +27,12 @@ export async function registerSlashCommands(bot) {
  * @returns {Promise<any>} - Whatever the routed handler returned; not consumed
  */
 export async function handleInteraction(interaction) {
+    // Map alert buttons also arrive from DMs, so they skip the guild check below.
+    if (interaction.isButton() && interaction.customId.startsWith(UNFOLLOW_BUTTON_PREFIX)) {
+        const rawMap = interaction.customId.slice(UNFOLLOW_BUTTON_PREFIX.length);
+        return unfollowAndReply(interaction, rawMap).catch((err) => replyWithError(interaction, err));
+    }
+
     if (!interaction.isChatInputCommand()) return;
 
     // inGuild() tests guildId + member, so an uncached guild still counts;
@@ -57,13 +65,23 @@ export async function handleInteraction(interaction) {
 
         return await command.handler(interaction);
     } catch (err) {
-        commandLogger.error({ command: commandName, err }, "Error handling slash command");
-        const content = "An error occurred while processing your command.";
-        // A deferred or replied interaction keeps the ephemerality it was created
-        // with, so the flag is only set on a first response.
-        const response = interaction.replied || interaction.deferred
-            ? interaction.editReply({ content })
-            : interaction.reply({ content, flags: MessageFlags.Ephemeral });
-        await response.catch(() => {});
+        await replyWithError(interaction, err);
     }
+}
+
+/**
+ * Turns a failed handler into an ephemeral reply instead of an unhandled rejection.
+ * @param {import('discord.js').RepliableInteraction} interaction
+ * @param {any} err
+ * @returns {Promise<void>}
+ */
+async function replyWithError(interaction, err) {
+    commandLogger.error({ command: interaction.commandName ?? interaction.customId, err }, "Error handling interaction");
+    const content = "An error occurred while processing your command.";
+    // A deferred or replied interaction keeps the ephemerality it was created
+    // with, so the flag is only set on a first response.
+    const response = interaction.replied || interaction.deferred
+        ? interaction.editReply({ content })
+        : interaction.reply({ content, flags: MessageFlags.Ephemeral });
+    await response.catch(() => {});
 }
