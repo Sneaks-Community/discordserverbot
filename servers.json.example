@@ -11,7 +11,7 @@
     "server_2": {
         "ip": "fqdn.example.tld:27015",
         "nick": "Server Two",
-        "protocol": "cs2",
+        "protocol": "counterstrike2",
         "keywords": [
             "server2",
             "test2"
