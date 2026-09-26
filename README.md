@@ -11,10 +11,11 @@ keeps a channel message in sync with their status, and DMs users when a followed
 
 - **Server monitoring**: queries every configured server on one interval and keeps a single
   message in a channel of your choosing updated with a rich embed of their status, posting that
-  message itself the first time
+  message itself the first time. An optional [Connect link](#connect-page) under each online
+  server joins that server
 - **Map notifications**: DMs everyone following a map when it appears on a server, pinging them
   in a configured channel instead when their DMs are closed. Buttons on every alert unfollow
-  that map or all maps, and work from the DM too. An optional [Connect button](#connect-button)
+  that map or all maps, and work from the DM too. An optional [Connect button](#connect-page)
   joins the server
 - **Slash commands**: all interaction is through slash commands and the alert buttons, rate
   limited per user
@@ -217,7 +218,7 @@ value, except where the table says empty disables something.
 | `FALLBACK_AVATAR_URL` | No | `https://i.imgur.com/cBiDnMi.png` | http(s) URL | Icon used in embed footers |
 | `OFFLINE_SERVER_IMAGE` | No | `https://i.imgur.com/WnS0Biz.png` | http(s) URL | Image used for an offline server |
 | `MAP_IMAGE_BASE_URL` | No | `https://bans.snksrv.com/images/maps/` | http(s) URL ending in `/`, or empty | Map thumbnails are requested as `<base><mapname>.jpg`. A map the host has no image for simply renders without one. Empty disables map images |
-| `CONNECT_BASE_URL` | No | - | http(s) URL, or empty | Page the [Connect button](#connect-button) on map notifications opens, as `<base><IP:Port>` with the IP:Port URL-encoded. Empty disables the button |
+| `CONNECT_BASE_URL` | No | - | http(s) URL, or empty | [Connect page](#connect-page) behind the Connect button on map notifications and the Connect links in the server list, opened as `<base><IP:Port>` with the IP:Port URL-encoded. Empty disables both |
 | `RATE_LIMIT_FOLLOW_PER_MINUTE` | No | `5` | 1 to 1000 | Max follow commands per minute per user |
 | `RATE_LIMIT_UNFOLLOW_PER_MINUTE` | No | `5` | 1 to 1000 | Max unfollow commands and alert button presses per minute per user |
 | `RATE_LIMIT_NOTIFICATION_PER_MINUTE` | No | `10` | 1 to 1000 | Max map-change DMs per minute per user. The same map again within a minute (for example live on two servers) sends no second DM and does not count against this; the one DM names the server seen first |
@@ -254,13 +255,14 @@ embed at 25 fields.
 | `protocol` | string | No | Game protocol (default: `csgo`), from the [supported games list](https://github.com/gamedig/node-gamedig/blob/master/GAMES_LIST.md) |
 | `keywords` | array | Yes | Search keywords, at least one. Each must be lowercase, free of leading and trailing whitespace, at most 32 characters, and unique across all servers, since a lookup returns the first match |
 
-## Connect Button
+## Connect Page
 
-Discord only makes http(s) links clickable, so a notification cannot link to `steam://connect/`
-directly. Instead, host the page below on any web server you run, for example as
-`https://example.com/connect.html`, and set `CONNECT_BASE_URL=https://example.com/connect.html?ip=`.
-Every map notification then gets a Connect button that opens the page, which hands the server's
-IP:Port to Steam.
+Discord only makes http(s) links clickable, so neither a notification nor the server list can
+link to `steam://connect/` directly. Instead, host the page below on any web server you run, for
+example as `https://example.com/connect.html`, and set
+`CONNECT_BASE_URL=https://example.com/connect.html?ip=`. Map notifications then get a Connect
+button, and each online server in the server list gets a Connect link. Both open the page, which
+hands the server's IP:Port to Steam.
 
 ```html
 <!doctype html>

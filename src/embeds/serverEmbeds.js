@@ -2,7 +2,7 @@ import { config } from "../config/index.js";
 import { escapeForDiscord } from "../utils/discordEscape.js";
 import { embedLogger } from "../utils/logger.js";
 import { clampText, EMBED_FIELD_NAME_LIMIT, EMBED_FIELD_VALUE_LIMIT, EMBED_TOTAL_LIMIT } from "../utils/truncate.js";
-import { createBaseEmbed, formatPlayerCounts } from "./baseEmbed.js";
+import { createBaseEmbed, formatPlayerCounts, getConnectUrl } from "./baseEmbed.js";
 
 // createBaseEmbed's "Last Updated" footer counts toward the same 6000, with room
 // to spare so the reservation never has to track the footer text itself.
@@ -39,8 +39,10 @@ export function makeEmbed(serverData) {
 
     for (const server of Object.values(serverData)) {
         const name = clampText(escapeForDiscord(server.name), EMBED_FIELD_NAME_LIMIT);
+        const connectUrl = server.online && getConnectUrl(server.fullIP);
+        const connectLine = connectUrl ? `\n[Connect](${connectUrl})` : "";
         const value = clampText(server.online
-            ? `**__Players:__** ${formatPlayerCounts(server)}\n**__Map:__** ${escapeForDiscord(server.map)}\n**__IP:__** ${escapeForDiscord(server.fullIP)}`
+            ? `**__Players:__** ${formatPlayerCounts(server)}\n**__Map:__** ${escapeForDiscord(server.map)}\n**__IP:__** ${escapeForDiscord(server.fullIP)}${connectLine}`
             : "**Server is not available.**", EMBED_FIELD_VALUE_LIMIT);
 
         // Skip rather than break: a later, smaller server can still fit.

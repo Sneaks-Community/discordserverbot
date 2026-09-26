@@ -51,4 +51,10 @@ describe("makeEmbed", () => {
         assert.equal(embed.fields.length, 5);
         assert.equal(embed.fields.at(-1).name, "Small");
     });
+
+    it("adds no Connect link while CONNECT_BASE_URL is unset", () => {
+        const { fields } = makeEmbed({ surf: { fullIP: "1.2.3.4:27015", map: "surf_beginner", name: "Surf", online: true } }).toJSON();
+
+        assert.ok(!fields[0].value.includes("Connect"), fields[0].value);
+    });
 });

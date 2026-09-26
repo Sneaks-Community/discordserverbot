@@ -16,6 +16,15 @@ export function formatPlayerCounts(server) {
 }
 
 /**
+ * Where the notification Connect button and the server list Connect links point.
+ * @param {string} address - host:port
+ * @returns {string|false} - false when CONNECT_BASE_URL is empty
+ */
+export function getConnectUrl(address) {
+    return config.connectBaseUrl ? `${config.connectBaseUrl}${encodeURIComponent(address)}` : false;
+}
+
+/**
  * Applies the bot's colour, footer and timestamp. Pass `footer: null` for
  * embeds that are not a snapshot (/help) or that reuse the footer (pagination).
  * @param {string} title

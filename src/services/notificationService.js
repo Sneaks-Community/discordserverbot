@@ -3,7 +3,7 @@ import pLimit from "p-limit";
 
 import { config } from "../config/index.js";
 import { getUsersFollowingMap } from "../db/index.js";
-import { createBaseEmbed, formatPlayerCounts } from "../embeds/baseEmbed.js";
+import { createBaseEmbed, formatPlayerCounts, getConnectUrl } from "../embeds/baseEmbed.js";
 import { mapNameSchema } from "../schemas/validationSchemas.js";
 import { getTerminalReason, isRecipientRefusal, isRetryableDiscordError, TerminalError } from "../utils/discordErrors.js";
 import { serviceLogger } from "../utils/logger.js";
@@ -156,7 +156,7 @@ function buildNotificationContent({ ip, mapName, server }) {
 }
 
 /**
- * A Connect link when CONNECT_BASE_URL is set, then unfollow buttons for this map and all maps.
+ * A Connect button when CONNECT_BASE_URL is set, then unfollow buttons for this map and all maps.
  * @param {object} event - Loop-invariant details shared by every recipient
  * @param {string} event.ip
  * @param {string} event.validatedMapName
@@ -169,11 +169,12 @@ function buildNotificationButtons({ ip, validatedMapName }) {
         .setLabel(`Unfollow ${option}`)
         .setStyle(ButtonStyle.Secondary));
 
-    if (config.connectBaseUrl) {
+    const connectUrl = getConnectUrl(ip);
+    if (connectUrl) {
         buttons.unshift(new ButtonBuilder()
             .setLabel("Connect")
             .setStyle(ButtonStyle.Link)
-            .setURL(`${config.connectBaseUrl}${encodeURIComponent(ip)}`));
+            .setURL(connectUrl));
     }
 
     return new ActionRowBuilder().addComponents(buttons);
