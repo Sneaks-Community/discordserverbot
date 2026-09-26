@@ -168,6 +168,12 @@ describe("parseEnv, URLs and presence", () => {
         assert.ok(parseEnv(env()).values.MAP_IMAGE_BASE_URL.endsWith("/"));
     });
 
+    it("rejects a steam:// connect base, which Discord refuses as a button link", () => {
+        assert.deepEqual(parseEnv(env({ CONNECT_BASE_URL: "steam://connect/" })).errors, [
+            "CONNECT_BASE_URL: must be an http(s) URL, or empty to disable the Connect button"
+        ]);
+    });
+
     it("rejects a non-http fallback avatar", () => {
         assert.deepEqual(parseEnv(env({ FALLBACK_AVATAR_URL: "ftp://example.test/a.png" })).errors, [
             "FALLBACK_AVATAR_URL: must be an http(s) URL"

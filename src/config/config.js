@@ -23,6 +23,7 @@ export const config = {
     // Empty shows no activity.
     botActivityText: env.BOT_ACTIVITY_TEXT,
     botActivityType: ACTIVITY_TYPE_BY_NAME[env.BOT_ACTIVITY_TYPE],
+    connectBaseUrl: env.CONNECT_BASE_URL,
     databasePath: env.DATABASE_PATH,
     discordGuildId: env.DISCORD_GUILD_ID,
     discordToken: env.DISCORD_TOKEN,

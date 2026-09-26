@@ -101,7 +101,7 @@ describe("notifyUsers", () => {
         await notifyUsers("de_dust2", { ip: "1.2.3.4:27015", nick: "Surf" });
 
         assert.equal(posts.length, 1);
-        assert.equal(posts[0].content, "de_dust2 is now on Surf!\nsteam://connect/1.2.3.4:27015\n<@100000000000000002> <@100000000000000003>");
+        assert.equal(posts[0].content, "de_dust2 is now on Surf!\n`1.2.3.4:27015`\n<@100000000000000002> <@100000000000000003>");
         assert.deepEqual(posts[0].allowedMentions, { users: ["100000000000000002", "100000000000000003"] });
     });
 });

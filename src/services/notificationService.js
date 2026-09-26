@@ -55,7 +55,7 @@ export async function notifyUsers(mapName, serverObj) {
     const server = serverObj?.nick ?? "unknown server";
 
     // gamedig's connect address when there is one: the configured ip may omit the
-    // port, and steam://connect needs the port the game actually listens on.
+    // port, and joining needs the port the game actually listens on.
     const ip = serverObj?.fullIP ?? serverObj?.ip ?? "unknown IP";
 
     // Names the follow schema rejects have no followers. Returned, not thrown: an
@@ -117,7 +117,7 @@ export async function sendTestNotification(user, map) {
     const event = { ip: serverObj.ip, mapImage: getMapImage(map), mapName: map, server: serverObj.nick, serverObj, validatedMapName: map };
 
     await user.send({
-        components: [buildUnfollowButtons(event)],
+        components: [buildNotificationButtons(event)],
         content: buildNotificationContent(event),
         embeds: [buildMapNotificationEmbed(event)]
     });
@@ -144,7 +144,7 @@ function buildMapNotificationEmbed({ mapImage, mapName, server, serverObj }) {
 }
 
 /**
- * Carries the connect link, which an embed cannot make clickable.
+ * Carries the address to copy, since mobile's Copy Text skips embeds.
  * @param {object} event - Loop-invariant details shared by every recipient
  * @param {string} event.ip
  * @param {string} event.mapName
@@ -152,21 +152,29 @@ function buildMapNotificationEmbed({ mapImage, mapName, server, serverObj }) {
  * @returns {string}
  */
 function buildNotificationContent({ ip, mapName, server }) {
-    return `${mapName} is now on ${server}!\nsteam://connect/${ip}`;
+    return `${mapName} is now on ${server}!\n\`${ip}\``;
 }
 
 /**
- * One button for the alert's map and one for all maps, each doing what /unfollow would.
+ * A Connect link when CONNECT_BASE_URL is set, then unfollow buttons for this map and all maps.
  * @param {object} event - Loop-invariant details shared by every recipient
+ * @param {string} event.ip
  * @param {string} event.validatedMapName
  * @returns {ActionRowBuilder}
  */
-function buildUnfollowButtons({ validatedMapName }) {
+function buildNotificationButtons({ ip, validatedMapName }) {
     // A map named "all" would repeat the second button's custom ID, which Discord rejects.
     const buttons = [...new Set([validatedMapName, "all"])].map((option) => new ButtonBuilder()
         .setCustomId(`${UNFOLLOW_BUTTON_PREFIX}${option}`)
         .setLabel(`Unfollow ${option}`)
         .setStyle(ButtonStyle.Secondary));
+
+    if (config.connectBaseUrl) {
+        buttons.unshift(new ButtonBuilder()
+            .setLabel("Connect")
+            .setStyle(ButtonStyle.Link)
+            .setURL(`${config.connectBaseUrl}${encodeURIComponent(ip)}`));
+    }
 
     return new ActionRowBuilder().addComponents(buttons);
 }
@@ -210,7 +218,7 @@ async function deliverNotification(user, event) {
         }
 
         await botInstance.users.send(user.discord_id, {
-            components: [buildUnfollowButtons(event)],
+            components: [buildNotificationButtons(event)],
             content: buildNotificationContent(event),
             embeds: [buildMapNotificationEmbed(event)]
         });
@@ -305,7 +313,7 @@ async function sendFallbackNotification(event, userIds) {
             await channel.send({
                 // Replaces the client's deny-all for this send, so only these users are pinged.
                 allowedMentions: { users: pinged },
-                components: [buildUnfollowButtons(event)],
+                components: [buildNotificationButtons(event)],
                 content: `${buildNotificationContent(event)}\n${mentions}`,
                 embeds: [buildMapNotificationEmbed(event)],
                 enforceNonce: true,

@@ -14,7 +14,8 @@ keeps a channel message in sync with their status, and DMs users when a followed
   message itself the first time
 - **Map notifications**: DMs everyone following a map when it appears on a server, pinging them
   in a configured channel instead when their DMs are closed. Buttons on every alert unfollow
-  that map or all maps, and work from the DM too
+  that map or all maps, and work from the DM too. An optional [Connect button](#connect-button)
+  joins the server
 - **Slash commands**: all interaction is through slash commands and the alert buttons, rate
   limited per user
 - **Automatic cleanup**: a member's follows are removed when they leave the guild (needs the
@@ -216,6 +217,7 @@ value, except where the table says empty disables something.
 | `FALLBACK_AVATAR_URL` | No | `https://i.imgur.com/cBiDnMi.png` | http(s) URL | Icon used in embed footers |
 | `OFFLINE_SERVER_IMAGE` | No | `https://i.imgur.com/WnS0Biz.png` | http(s) URL | Image used for an offline server |
 | `MAP_IMAGE_BASE_URL` | No | `https://bans.snksrv.com/images/maps/` | http(s) URL ending in `/`, or empty | Map thumbnails are requested as `<base><mapname>.jpg`. A map the host has no image for simply renders without one. Empty disables map images |
+| `CONNECT_BASE_URL` | No | - | http(s) URL, or empty | Page the [Connect button](#connect-button) on map notifications opens, as `<base><IP:Port>` with the IP:Port URL-encoded. Empty disables the button |
 | `RATE_LIMIT_FOLLOW_PER_MINUTE` | No | `5` | 1 to 1000 | Max follow commands per minute per user |
 | `RATE_LIMIT_UNFOLLOW_PER_MINUTE` | No | `5` | 1 to 1000 | Max unfollow commands and alert button presses per minute per user |
 | `RATE_LIMIT_NOTIFICATION_PER_MINUTE` | No | `10` | 1 to 1000 | Max map-change DMs per minute per user. The same map again within a minute (for example live on two servers) sends no second DM and does not count against this; the one DM names the server seen first |
@@ -251,3 +253,29 @@ embed at 25 fields.
 | `nick` | string | Yes | Display name shown in embeds (max 100 characters) |
 | `protocol` | string | No | Game protocol (default: `csgo`), from the [supported games list](https://github.com/gamedig/node-gamedig/blob/master/GAMES_LIST.md) |
 | `keywords` | array | Yes | Search keywords, at least one. Each must be lowercase, free of leading and trailing whitespace, at most 32 characters, and unique across all servers, since a lookup returns the first match |
+
+## Connect Button
+
+Discord only makes http(s) links clickable, so a notification cannot link to `steam://connect/`
+directly. Instead, host the page below on any web server you run, for example as
+`https://example.com/connect.html`, and set `CONNECT_BASE_URL=https://example.com/connect.html?ip=`.
+Every map notification then gets a Connect button that opens the page, which hands the server's
+IP:Port to Steam.
+
+```html
+<!doctype html>
+<meta charset="utf-8">
+<title>Join server</title>
+<p id="status">Not a server address.</p>
+<script>
+    const ip = new URLSearchParams(location.search).get("ip") ?? "";
+    if (/^[A-Za-z0-9.-]+(:\d{1,5})?$/.test(ip)) {
+        document.getElementById("status").textContent = `Opening Steam to join ${ip}`;
+        location.replace(`steam://connect/${ip}`);
+    }
+</script>
+```
+
+Anyone can link to the page, so it passes nothing to Steam but a host and port. A click passes
+Discord's "Leaving Discord" prompt, then the browser's prompt to open Steam, and joins only on a
+computer with Steam installed.

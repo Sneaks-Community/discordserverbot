@@ -161,6 +161,11 @@ export const envSchema = z.object({
         "custom",
         z.string().toLowerCase().pipe(z.enum(ACTIVITY_TYPES, { error: `must be one of: ${ACTIVITY_TYPES.join(", ")}` }))
     ),
+    // Discord only links http(s), so this is a page that forwards to steam://connect/.
+    CONNECT_BASE_URL: withDefault(
+        "",
+        z.string().refine((value) => value === "" || isHttpUrl(value), "must be an http(s) URL, or empty to disable the Connect button")
+    ),
     DATABASE_PATH: withDefault("db.sqlite", z.string()),
     // Required: the bot leaves every other guild. Empty would open the admin
     // commands, which act on the whole database, to any guild's Administrator.

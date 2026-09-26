@@ -149,8 +149,8 @@ export async function getInfo(server, index, wasOffline = false) {
 
     return {
         bots: sanitizedBots,
-        // Server-supplied for some protocols, and the DM inserts it raw after
-        // steam://connect/, so anything but host:port gives way to the configured ip.
+        // Server-supplied for some protocols, and the DM inserts it raw, so
+        // anything but host:port gives way to the configured ip.
         fullIP: typeof res.connect === "string" && /^[A-Za-z0-9.-]{1,253}:\d{1,5}$/.test(res.connect) ? res.connect : server.ip,
         index: index,
         keywords: server.keywords,
