@@ -25,7 +25,7 @@
     "discord.js": "^14.27.0",
     "gamedig": "^5.3.3",
     "p-limit": "^7.3.3",
-    "pino": "^10.3.1",
+    "pino": "^10.4.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {
