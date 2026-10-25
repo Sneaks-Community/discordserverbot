@@ -237,11 +237,9 @@ async function deliverNotification(user, event) {
             return DELIVERY.refused;
         }
 
-        if (reason) {
-            serviceLogger.warn({ err: e, map: mapName, userId }, `DM cannot be delivered, not retrying. ${reason}`);
-        } else {
-            serviceLogger.warn({ err: e, map: mapName, userId }, "Failed to send DM to user");
-        }
+        serviceLogger.warn({ err: e, map: mapName, userId }, reason
+            ? `DM cannot be delivered, not retrying. ${reason}`
+            : "Failed to send DM to user");
 
         return DELIVERY.failed;
     }
@@ -325,10 +323,8 @@ async function sendFallbackNotification(event, userIds) {
         serviceLogger.info({ map: mapName, undeliverable: userIds.length }, "Sent one fallback notification for the undeliverable recipients");
     } catch (fallbackError) {
         const reason = getTerminalReason(fallbackError);
-        if (reason) {
-            serviceLogger.error({ err: fallbackError, map: mapName }, `Fallback notification cannot succeed and will not be retried. ${reason}`);
-        } else {
-            serviceLogger.error({ err: fallbackError, map: mapName }, "Failed to send fallback notification");
-        }
+        serviceLogger.error({ err: fallbackError, map: mapName }, reason
+            ? `Fallback notification cannot succeed and will not be retried. ${reason}`
+            : "Failed to send fallback notification");
     }
 }

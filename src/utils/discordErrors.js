@@ -36,13 +36,11 @@ export class TerminalError extends Error {
  * @returns {string|null} - Remediation hint, or null when retryable
  */
 export function getTerminalReason(error) {
-    if (error instanceof TerminalError) {
-        return error.hint;
-    }
-
     // DiscordAPIError codes are numbers and node's own are strings, so a plain
     // lookup cannot confuse the two.
-    return TERMINAL_API_CODES.get(error?.code) ?? null;
+    return error instanceof TerminalError
+        ? error.hint
+        : TERMINAL_API_CODES.get(error?.code) ?? null;
 }
 
 /**

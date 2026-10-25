@@ -237,11 +237,9 @@ async function publishEmbed(embed) {
         }
     } catch (err) {
         const reason = getTerminalReason(err);
-        if (reason) {
-            botLogger.error({ channelId, err }, `Embed update cannot succeed until this is fixed. ${reason}`);
-        } else {
-            botLogger.error({ channelId, err }, "Failed to update embed; the next tick will try again");
-        }
+        botLogger.error({ channelId, err }, reason
+            ? `Embed update cannot succeed until this is fixed. ${reason}`
+            : "Failed to update embed; the next tick will try again");
     } finally {
         isPublishing = false;
     }
