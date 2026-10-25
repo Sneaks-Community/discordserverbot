@@ -1,6 +1,6 @@
 {
   "name": "discordserverbot",
-  "version": "8.0.0",
+  "version": "8.0.1",
   "description": "Server info bot",
   "type": "module",
   "scripts": {
