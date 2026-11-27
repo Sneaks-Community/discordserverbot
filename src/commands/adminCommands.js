@@ -3,6 +3,7 @@ import { MessageFlags } from "discord.js";
 import { getAllFollows, unfollowAll } from "../db/index.js";
 import { discordIdSchema, mapNameSchema } from "../schemas/validationSchemas.js";
 import { sendTestNotification } from "../services/notificationService.js";
+import { commandLogger } from "../utils/logger.js";
 import { replyWithPagedEmbed } from "../utils/pagination.js";
 import { validateWithZod } from "../utils/zodValidator.js";
 
@@ -77,6 +78,7 @@ export async function handleSlashRemoveuser(interaction) {
     }
 
     unfollowAll(userIdValidation.data);
+    commandLogger.info({ targetUserId: userIdValidation.data, userId: interaction.user.id }, "Admin removed all follows for a user");
     // A real mention in content: deny pings rather than rely on the ephemeral flag staying put.
     await interaction.reply({ content: `Removed all maps from user <@${userId}>.`, flags: MessageFlags.Ephemeral });
 }
