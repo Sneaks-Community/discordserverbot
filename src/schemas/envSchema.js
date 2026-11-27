@@ -244,12 +244,21 @@ export function formatEnvIssue(issue) {
 }
 
 /**
+ * Declared variables only: handing over all of process.env makes CodeQL's
+ * js/clear-text-logging treat every config value that reaches a log as a secret.
+ * @returns {Record<string, string|undefined>}
+ */
+function readDeclaredEnv() {
+    return Object.fromEntries(Object.keys(envSchema.shape).map((name) => [name, process.env[name]]));
+}
+
+/**
  * Collects every failure rather than stopping at the first, so one restart
  * reports all of an operator's mistakes.
  * @param {Record<string, string|undefined>} [env]
  * @returns {{ errors: string[], values: object, warnings: string[] }}
  */
-export function parseEnv(env = process.env) {
+export function parseEnv(env = readDeclaredEnv()) {
     const result = envSchema.safeParse(env);
 
     if (result.success) {
