@@ -3,7 +3,7 @@
 A Discord bot that monitors Counter-Strike: Global Offensive (and other supported) servers,
 keeps a channel message in sync with their status, and DMs users when a followed map appears.
 
-![Version](https://img.shields.io/badge/version-8.0.0-blue)
+![Version](https://img.shields.io/badge/version-8.0.2-blue)
 ![Node](https://img.shields.io/badge/node-%3E%3D24-blue)
 ![Docker](https://img.shields.io/badge/docker-ready-blue)
 
