@@ -68,7 +68,7 @@ function cleanupRateLimits() {
     }
 
     if (cleaned > 0) {
-        serviceLogger.info(`Rate limit cleanup: removed ${cleaned} users, current size: ${userActionRateLimits.size}`);
+        serviceLogger.debug(`Rate limit cleanup: removed ${cleaned} users, current size: ${userActionRateLimits.size}`);
     }
 }
 
