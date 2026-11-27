@@ -26,9 +26,12 @@ RUN npm rebuild better-sqlite3
 # -----------------------------------------------------------------------------
 FROM node:${NODE_VERSION}-alpine AS production
 
-# Install runtime dependencies only
+# Install runtime dependencies only. The package managers are never run here,
+# so drop them and the CVEs scanners report in their bundled dependencies.
 RUN apk add --no-cache \
-    sqlite
+    sqlite && \
+    rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /opt/yarn-* \
+        /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /usr/local/bin/yarn /usr/local/bin/yarnpkg
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
