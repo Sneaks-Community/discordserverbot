@@ -26,7 +26,12 @@ export const serverObject = readServers();
  */
 function readServers() {
     try {
-        return JSON.parse(readFileSync(SERVERS_PATH, "utf8"));
+        const parsed = JSON.parse(readFileSync(SERVERS_PATH, "utf8"));
+
+        // Module-load readers call Object.keys on this, which throws on null; the schema reports every other shape.
+        if (parsed === null) throw new Error("expected a JSON object of server entries, found null");
+
+        return parsed;
     } catch (err) {
         const hint = err.code === "ENOENT" ? " (copy servers.json.example to the project root; in Docker check the bind mount)" : "";
         loadError = `servers.json: ${err.message}${hint}`;
