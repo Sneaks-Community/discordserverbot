@@ -5,9 +5,12 @@ import { UNFOLLOW_BUTTON_PREFIX } from "../services/notificationService.js";
 import { commandLogger } from "../utils/logger.js";
 import { hasAdminRole } from "./adminAuth.js";
 import { buildSlashCommands, COMMANDS_BY_NAME } from "./definitions.js";
-import { unfollowAndReply } from "./followCommands.js";
+import { enforceRateLimit, unfollowAndReply } from "./followCommands.js";
 
 const slashCommands = buildSlashCommands();
+
+// One bucket for every publicReply command, so alternating between them cannot flood a channel.
+const PUBLIC_REPLY_LIMIT_PER_MINUTE = 5;
 
 /**
  * Throws without logging: only the caller knows whether a failure is fatal.
@@ -61,6 +64,16 @@ export async function handleInteraction(interaction) {
                 return interaction.reply({ content: "You do not have permission to use this command.", flags: MessageFlags.Ephemeral });
             }
             commandLogger.info({ command: commandName, userId, username }, "Admin command executed");
+        }
+
+        if (command.publicReply) {
+            const withinLimit = await enforceRateLimit(interaction, {
+                action: "publicReply",
+                before: "using another command that posts in the channel",
+                limit: PUBLIC_REPLY_LIMIT_PER_MINUTE,
+                userId
+            });
+            if (!withinLimit) return;
         }
 
         return await command.handler(interaction);

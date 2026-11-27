@@ -17,16 +17,16 @@ import { validateWithZod } from "../utils/zodValidator.js";
  * @param {Interaction} interaction
  * @param {object} options
  * @param {string} options.action - Rate limit key, one bucket per action
- * @param {string} options.gerund - Reads as "before ... another map"
+ * @param {string} options.before - Reads as "Please wait N seconds before ..."
  * @param {number} options.limit
  * @param {string} options.userId
  * @returns {Promise<boolean>} - Whether the command may proceed
  */
-async function enforceRateLimit(interaction, { action, gerund, limit, userId }) {
+export async function enforceRateLimit(interaction, { action, before, limit, userId }) {
     const result = checkRateLimit(userId, action, limit);
     if (result.allowed) return true;
 
-    await interaction.reply({ content: `Rate limit exceeded. Please wait ${result.retryAfter} seconds before ${gerund} another map.`, flags: MessageFlags.Ephemeral });
+    await interaction.reply({ content: `Rate limit exceeded. Please wait ${result.retryAfter} seconds before ${before}.`, flags: MessageFlags.Ephemeral });
     return false;
 }
 
@@ -41,7 +41,7 @@ export async function handleSlashFollow(interaction) {
 
     const withinLimit = await enforceRateLimit(interaction, {
         action: "follow",
-        gerund: "following",
+        before: "following another map",
         limit: config.rateLimitFollowPerMinute,
         userId
     });
@@ -93,7 +93,7 @@ export async function unfollowAndReply(interaction, rawMap) {
 
     const withinLimit = await enforceRateLimit(interaction, {
         action: "unfollow",
-        gerund: "unfollowing",
+        before: "unfollowing another map",
         limit: config.rateLimitUnfollowPerMinute,
         userId
     });

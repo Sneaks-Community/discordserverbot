@@ -206,3 +206,28 @@ describe("handleInteraction error containment", () => {
         await assert.doesNotReject(handleInteraction(request));
     });
 });
+
+describe("handleInteraction public reply limit", () => {
+    it("refuses the sixth public reply in a minute, ephemerally and without running the handler", async () => {
+        const spy = inject("gate-public", false);
+        COMMANDS_BY_NAME.get("gate-public").publicReply = true;
+
+        let last;
+        for (let i = 0; i < 6; i++) {
+            last = interaction({ command: "gate-public" });
+            // Its own bucket, since the limiter is module-level state.
+            last.user.id = "400000000000000009";
+            await handleInteraction(last);
+        }
+
+        assert.equal(spy.calls(), 5);
+        assert.match(last.replies[0].content, /rate limit exceeded/i);
+        assert.equal(last.replies[0].flags, MessageFlags.Ephemeral);
+    });
+
+    it("keeps every shipped channel-reply command marked publicReply", () => {
+        for (const name of ["help", "keywords", "players"]) {
+            assert.equal(COMMANDS_BY_NAME.get(name)?.publicReply, true, `${name} must stay rate limited`);
+        }
+    });
+});

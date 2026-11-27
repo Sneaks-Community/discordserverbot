@@ -16,19 +16,20 @@ import { handleSlashPing } from "./utilityCommands.js";
  * @property {Function} handler
  * @property {string} name
  * @property {Function} [options] - Adds the command's string option, if it takes one
+ * @property {boolean} [publicReply] - Replies in the channel, so the dispatcher rate limits it
  */
 
 /** @type {ReadonlyArray<CommandDefinition>} */
 const COMMAND_DEFINITIONS = Object.freeze([
     { admin: false, description: "Show players on a server", handler: handleSlashPlayers, name: "players",
-        options: opt => opt.setName("server").setDescription("Server keyword or name").setRequired(false) },
-    { admin: false, description: "List all available server keywords", handler: handleSlashKeywords, name: "keywords" },
+        options: opt => opt.setName("server").setDescription("Server keyword or name").setRequired(false), publicReply: true },
+    { admin: false, description: "List all available server keywords", handler: handleSlashKeywords, name: "keywords", publicReply: true },
     { admin: false, description: "Follow a map to receive DM notifications", handler: handleSlashFollow, name: "follow",
         options: opt => opt.setName("map").setDescription("Map name to follow").setRequired(true) },
     { admin: false, description: "Stop following a map, or all your maps at once", handler: handleSlashUnfollow, name: "unfollow",
         options: opt => opt.setName("map").setDescription("Map name to unfollow (or 'all' for all maps)").setRequired(true) },
     { admin: false, description: "List all maps you are following", handler: handleSlashListfollows, name: "listfollows" },
-    { admin: false, description: "Show list of available commands", handler: handleSlashHelp, name: "help" },
+    { admin: false, description: "Show list of available commands", handler: handleSlashHelp, name: "help", publicReply: true },
     { admin: false, description: "Check bot latency", handler: handleSlashPing, name: "ping" },
     { admin: true, description: "List all users and their followed maps (Admin only)", handler: handleSlashListallfollows, name: "listallfollows" },
     { admin: true, description: "DM yourself a sample map notification (Admin only)", handler: handleSlashTestnotify, name: "testnotify",
